@@ -19,11 +19,10 @@
     align-items: center;
     padding: 40px 20px;
     overflow-x: hidden;
-    zoom: 0.25;
   }
 
   .title {
-    font-size: clamp(18px, 3vw, 20px);
+    font-size: clamp(16px, 3vw, 28px);
     font-weight: 800;
     color: #D2691E;
     letter-spacing: 4px;
@@ -32,7 +31,7 @@
   }
 
   .subtitle {
-    font-size: clamp(10px, 1vw, 8px);
+    font-size: 14px;
     color: #A0522D;
     margin-bottom: 40px;
     font-weight: 500;
@@ -50,9 +49,38 @@
     align-items: flex-end;
     justify-content: center;
     gap: clamp(8px, 2vw, 24px);
-    height: 100px;
+    height: 240px;
     padding: 0 10px;
     position: relative;
+  }
+
+  /* 年份行 —— 独立于柱子，保证文字永不遮挡 */
+  .years-row {
+    display: flex;
+    justify-content: center;
+    gap: clamp(8px, 2vw, 24px);
+    padding: 0 10px;
+    margin-top: 10px;
+  }
+
+  .year-item {
+    flex: 1;
+    max-width: 100px;
+    text-align: center;
+  }
+
+  .year-item .year-label {
+    font-size: clamp(11px, 1.8vw, 15px);
+    font-weight: 600;
+    color: #8B4513;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .year-item:hover .year-label {
+    color: #D2691E;
+    transform: scale(1.08);
   }
 
   /* 地面线 */
@@ -98,10 +126,10 @@
   }
 
   .value-label {
-    font-size: clamp(16px, 2.5vw, 22px);
+    font-size: clamp(12px, 2vw, 16px);
     font-weight: 700;
     color: #CC5500;
-    margin-top: 10px;
+    margin-top: 6px;
     opacity: 0;
     transform: translateY(-8px);
     transition: all 0.3s ease;
@@ -112,20 +140,6 @@
   .bar-item.active .value-label {
     opacity: 1;
     transform: translateY(0);
-  }
-
-  .year-label {
-    font-size: clamp(13px, 2vw, 17px);
-    font-weight: 600;
-    color: #8B4513;
-    margin-top: 14px;
-    letter-spacing: 1px;
-    transition: all 0.3s ease;
-  }
-
-  .bar-item:hover .year-label {
-    color: #D2691E;
-    transform: scale(1.08);
   }
 
   /* 信息面板 */
@@ -246,7 +260,8 @@
 
   /* 响应式 */
   @media (max-width: 600px) {
-    .bars-wrapper { height: 360px; gap: 4px; }
+    .bars-wrapper { height: 200px; gap: 4px; }
+    .years-row { gap: 4px; }
     body { padding: 24px 12px; }
     .info-panel { padding: 16px 20px; }
     .info-panel .panel-days { font-size: 32px; }
@@ -262,6 +277,7 @@
   <div class="bars-wrapper" id="barsWrapper">
     <div class="ground-line"></div>
   </div>
+  <div class="years-row" id="yearsRow"></div>
 </div>
 
 <div class="info-panel" id="infoPanel">
@@ -285,8 +301,8 @@ const data = [
 ];
 
 const maxDays = Math.max(...data.map(d => d.days));
-const maxHeight = 380; // 最大高度(px)
-const baseHeight = 55;  // 最小高度(px)
+const maxHeight = 200; // 最大高度(px)
+const baseHeight = 35;  // 最小高度(px)
 
 // 生成东方明珠塔SVG
 function createPearlTower(days, index) {
@@ -370,6 +386,7 @@ function createPearlTower(days, index) {
 
 // 渲染图表
 const wrapper = document.getElementById('barsWrapper');
+const yearsRow = document.getElementById('yearsRow');
 const legend = document.getElementById('legend');
 const infoPanel = document.getElementById('infoPanel');
 
@@ -386,7 +403,6 @@ data.forEach((item, index) => {
       ${svgHtml}
       <span class="value-label">${item.days}</span>
     </div>
-    <span class="year-label">${item.year}</span>
   `;
 
   // 交互事件
@@ -394,6 +410,13 @@ data.forEach((item, index) => {
   barItem.addEventListener('click', () => showInfo(item, true));
 
   wrapper.appendChild(barItem);
+
+  // 年份标签行
+  const yearItem = document.createElement('div');
+  yearItem.className = 'year-item';
+  yearItem.innerHTML = `<span class="year-label">${item.year}</span>`;
+  yearItem.addEventListener('mouseenter', () => showInfo(item));
+  yearsRow.appendChild(yearItem);
 
   // 图例项
   const legendItem = document.createElement('div');
