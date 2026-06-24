@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>热浪之下 Heatwave</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC",
+                "Microsoft YaHei", sans-serif;
+            background: #f7f7f7;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #ff6b35;
+            margin-bottom: 15px;
+            font-size: 42px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 18px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 18px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 18px;
+            text-decoration: none;
+            color: #333;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .08);
+            transition: all .25s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .card-desc {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🔥 热浪之下</h1>
+    <p class="subtitle">Heatwave Data Journalism Project</p>
+
+    <div class="grid">
+
+        <a class="card" href="10年省份高温天数变化.html">
+            <div class="card-title">10年省份高温天数变化</div>
+            <div class="card-desc">观察全国高温天气长期变化趋势。</div>
+        </a>
+
+        <a class="card" href="2026高温天数榜单.html">
+            <div class="card-title">2026高温天数榜单</div>
+            <div class="card-desc">2026年各地高温天气排行。</div>
+        </a>
+
+        <a class="card" href="2026各省首次突破35℃.html">
+            <div class="card-title">首次突破35℃时间</div>
+            <div class="card-desc">各省首次进入高温天气时间分布。</div>
+        </a>
+
+        <a class="card" href="词云图.html">
+            <div class="card-title">词云图</div>
+            <div class="card-desc">公众对高温话题关注热点。</div>
+        </a>
+
+        <a class="card" href="高温人体系统影响可视化(1).html">
+            <div class="card-title">人体系统影响</div>
+            <div class="card-desc">高温对人体多个系统的影响。</div>
+        </a>
+
+        <a class="card" href="各省桑拿天占比与体感温度气泡图.html">
+            <div class="card-title">桑拿天与体感温度</div>
+            <div class="card-desc">高湿高温天气影响分析。</div>
+        </a>
+
+        <a class="card" href="交互小游戏.html">
+            <div class="card-title">高温知识测试</div>
+            <div class="card-desc">互动答题小游戏。</div>
+        </a>
+
+        <a class="card" href="全国10年桑拿天占比变化.html">
+            <div class="card-title">全国10年桑拿天变化</div>
+            <div class="card-desc">桑拿天气候变化趋势分析。</div>
+        </a>
+
+        <a class="card" href="全国31省高温津贴对比地图(1).html">
+            <div class="card-title">高温津贴地图</div>
+            <div class="card-desc">31省高温津贴标准对比。</div>
+        </a>
+
+        <a class="card" href="桑拿天演变地图.html">
+            <div class="card-title">桑拿天演变地图</div>
+            <div class="card-desc">全国桑拿天气空间变化。</div>
+        </a>
+
+        <a class="card" href="体感温度测算.html">
+            <div class="card-title">体感温度计算器</div>
+            <div class="card-desc">输入温湿度计算体感温度。</div>
+        </a>
+
+        <a class="card" href="中国气候报.html">
+            <div class="card-title">中国气候报</div>
+            <div class="card-desc">高温与气候变化专题内容。</div>
+        </a>
+
+        <a class="card" href="city-loss-top8.html">
+            <div class="card-title">城市劳动损失TOP8</div>
+            <div class="card-desc">高温造成的劳动时间损失。</div>
+        </a>
+
+        <a class="card" href="electricity-data.html">
+            <div class="card-title">电力数据分析</div>
+            <div class="card-desc">高温下电力负荷变化。</div>
+        </a>
+
+        <a class="card" href="heatstroke-chart.html">
+            <div class="card-title">热射病统计</div>
+            <div class="card-desc">热射病相关数据分析。</div>
+        </a>
+
+        <a class="card" href="heatstroke-economic.html">
+            <div class="card-title">热射病经济影响</div>
+            <div class="card-desc">热射病造成的经济损失。</div>
+        </a>
+
+        <a class="card" href="heatstroke-sun-bars.html">
+            <div class="card-title">高温与日照关系</div>
+            <div class="card-desc">太阳辐射与热射病关系。</div>
+        </a>
+
+        <a class="card" href="heatstroke-timeline.html">
+            <div class="card-title">热射病时间线</div>
+            <div class="card-desc">重要热射病事件梳理。</div>
+        </a>
+
+        <a class="card" href="heatstroke-trend.html">
+            <div class="card-title">热射病趋势</div>
+            <div class="card-desc">热射病变化趋势分析。</div>
+        </a>
+
+        <a class="card" href="love-station-gap.html">
+            <div class="card-title">爱心驿站覆盖差距</div>
+            <div class="card-desc">高温服务设施分布分析。</div>
+        </a>
+
+        <a class="card" href="shanghai-pearl-tower-chart.html">
+            <div class="card-title">上海东方明珠可视化</div>
+            <div class="card-desc">上海高温数据专题图表。</div>
+        </a>
+
+    </div>
+
+    <footer>
+        Heatwave Data Journalism Project © 2026
+    </footer>
+
+</body>
+
+</html>
