@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>各省桑拿天占比与体感温度气泡图</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: transparent !important;
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    color: #2c3e50;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 20px 12px;
+  }
+  .header {
+    flex-shrink: 0;
+    padding-bottom: 10px;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+  .header .subtitle {
+    font-size: 11.5px;
+    color: #999;
+    line-height: 1.5;
+  }
+  .legend-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 6px 0 2px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #666;
+  }
+  .legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .size-legend {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    margin-left: 4px;
+  }
+  .size-legend .sl-circle {
+    border-radius: 50%;
+    background: rgba(100,120,160,0.15);
+    border: 1.5px solid rgba(100,120,160,0.4);
+  }
+  .chart-wrap {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+  #chart {
+    width: 100%;
+    height: 100%;
+  }
+  .footer {
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 10.5px;
+    color: #bbb;
+    padding-top: 6px;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>各省桑拿天占比与体感温度气泡图</h1>
+    <div class="subtitle">
+      全国33个省份 · 2015-2025年（11年均值） ｜ X轴：年均高温天数（≥35℃） · Y轴：年均桑拿天占比（%） · 气泡大小：平均高温日均温（℃）
+    </div>
+  </div>
+  <div class="legend-bar">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#FF6B6B;"></div>
+      <span>华中/华东/华南</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#4ECDC4;"></div>
+      <span>东北/华北/西北/西南</span>
+    </div>
+    <div class="legend-item">
+      <span>气泡大小 = 平均体感温度</span>
+      <div class="size-legend">
+        <div class="sl-circle" style="width:8px;height:8px;"></div>
+        <div class="sl-circle" style="width:14px;height:14px;"></div>
+        <div class="sl-circle" style="width:20px;height:20px;"></div>
+      </div>
+    </div>
+  </div>
+  <div class="chart-wrap">
+    <div id="chart"></div>
+  </div>
+  <div class="footer">数据来源：ERA5再分析数据 · 高温天：日最高气温≥35℃ · 桑拿天：日最高气温≥32℃且日平均相对湿度≥60%</div>
+
+<script>
+const rawData = [
+  {"name":"新疆维吾尔自治区","region":"东北/华北/西北/西南","avg_hot_days":115.1,"avg_sauna_pct":0.9,"avg_sauna_days":2.3,"avg_temp":39.6,"max_temp":48.1},
+  {"name":"江西省","region":"华中/华东/华南","avg_hot_days":79.9,"avg_sauna_pct":50.3,"avg_sauna_days":119.1,"avg_temp":37.4,"max_temp":42.5},
+  {"name":"广东省","region":"华中/华东/华南","avg_hot_days":78.6,"avg_sauna_pct":66.3,"avg_sauna_days":156.9,"avg_temp":36.6,"max_temp":41.3},
+  {"name":"广西壮族自治区","region":"华中/华东/华南","avg_hot_days":75.9,"avg_sauna_pct":65.9,"avg_sauna_days":155.5,"avg_temp":36.7,"max_temp":42.5},
+  {"name":"甘肃省","region":"东北/华北/西北/西南","avg_hot_days":72.5,"avg_sauna_pct":11.6,"avg_sauna_days":27.4,"avg_temp":37.9,"max_temp":44.8},
+  {"name":"福建省","region":"华中/华东/华南","avg_hot_days":72.4,"avg_sauna_pct":53.5,"avg_sauna_days":126.6,"avg_temp":37.0,"max_temp":41.8},
+  {"name":"湖南省","region":"华中/华东/华南","avg_hot_days":70.5,"avg_sauna_pct":46.2,"avg_sauna_days":109.3,"avg_temp":37.4,"max_temp":42.8},
+  {"name":"浙江省","region":"华中/华东/华南","avg_hot_days":67.5,"avg_sauna_pct":45.3,"avg_sauna_days":106.7,"avg_temp":37.8,"max_temp":44.1},
+  {"name":"河南省","region":"华中/华东/华南","avg_hot_days":60.5,"avg_sauna_pct":33.7,"avg_sauna_days":79.4,"avg_temp":37.4,"max_temp":45.0},
+  {"name":"内蒙古自治区","region":"东北/华北/西北/西南","avg_hot_days":59.6,"avg_sauna_pct":12.4,"avg_sauna_days":29.1,"avg_temp":37.5,"max_temp":43.8},
+  {"name":"四川省","region":"东北/华北/西北/西南","avg_hot_days":57.5,"avg_sauna_pct":46.9,"avg_sauna_days":110.4,"avg_temp":37.5,"max_temp":45.1},
+  {"name":"陕西省","region":"东北/华北/西北/西南","avg_hot_days":57.4,"avg_sauna_pct":25.2,"avg_sauna_days":59.1,"avg_temp":37.6,"max_temp":43.7},
+  {"name":"云南省","region":"东北/华北/西北/西南","avg_hot_days":56.3,"avg_sauna_pct":49.3,"avg_sauna_days":116.3,"avg_temp":36.5,"max_temp":41.5},
+  {"name":"湖北省","region":"华中/华东/华南","avg_hot_days":52.1,"avg_sauna_pct":41.5,"avg_sauna_days":97.4,"avg_temp":36.9,"max_temp":43.4},
+  {"name":"安徽省","region":"华中/华东/华南","avg_hot_days":51.5,"avg_sauna_pct":41.1,"avg_sauna_days":96.5,"avg_temp":36.9,"max_temp":41.5},
+  {"name":"海南省","region":"华中/华东/华南","avg_hot_days":46.9,"avg_sauna_pct":61.1,"avg_sauna_days":144.1,"avg_temp":36.2,"max_temp":40.5},
+  {"name":"贵州省","region":"东北/华北/西北/西南","avg_hot_days":46.1,"avg_sauna_pct":46.4,"avg_sauna_days":109.1,"avg_temp":36.7,"max_temp":43.9},
+  {"name":"重庆市","region":"东北/华北/西北/西南","avg_hot_days":45.5,"avg_sauna_pct":34.3,"avg_sauna_days":80.8,"avg_temp":37.6,"max_temp":44.4},
+  {"name":"河北省","region":"东北/华北/西北/西南","avg_hot_days":44.8,"avg_sauna_pct":25.0,"avg_sauna_days":59.0,"avg_temp":37.2,"max_temp":44.2},
+  {"name":"山东省","region":"华中/华东/华南","avg_hot_days":40.7,"avg_sauna_pct":29.6,"avg_sauna_days":69.7,"avg_temp":36.8,"max_temp":42.6},
+  {"name":"江苏省","region":"华中/华东/华南","avg_hot_days":39.8,"avg_sauna_pct":36.1,"avg_sauna_days":84.8,"avg_temp":36.8,"max_temp":42.7},
+  {"name":"山西省","region":"东北/华北/西北/西南","avg_hot_days":36.2,"avg_sauna_pct":18.4,"avg_sauna_days":43.2,"avg_temp":37.0,"max_temp":42.3},
+  {"name":"北京市","region":"东北/华北/西北/西南","avg_hot_days":24.7,"avg_sauna_pct":13.9,"avg_sauna_days":32.8,"avg_temp":37.0,"max_temp":42.2},
+  {"name":"天津市","region":"东北/华北/西北/西南","avg_hot_days":23.4,"avg_sauna_pct":17.1,"avg_sauna_days":40.1,"avg_temp":36.9,"max_temp":42.6},
+  {"name":"上海市","region":"华中/华东/华南","avg_hot_days":22.3,"avg_sauna_pct":25.2,"avg_sauna_days":59.1,"avg_temp":36.5,"max_temp":40.9},
+  {"name":"宁夏回族自治区","region":"东北/华北/西北/西南","avg_hot_days":14.0,"avg_sauna_pct":4.3,"avg_sauna_days":10.1,"avg_temp":36.5,"max_temp":39.7},
+  {"name":"辽宁省","region":"东北/华北/西北/西南","avg_hot_days":11.6,"avg_sauna_pct":16.5,"avg_sauna_days":38.6,"avg_temp":36.2,"max_temp":41.0},
+  {"name":"吉林省","region":"东北/华北/西北/西南","avg_hot_days":7.0,"avg_sauna_pct":10.9,"avg_sauna_days":26.0,"avg_temp":36.7,"max_temp":42.5},
+  {"name":"黑龙江省","region":"东北/华北/西北/西南","avg_hot_days":6.3,"avg_sauna_pct":10.0,"avg_sauna_days":23.8,"avg_temp":36.1,"max_temp":42.3},
+  {"name":"西藏自治区","region":"东北/华北/西北/西南","avg_hot_days":3.3,"avg_sauna_pct":15.1,"avg_sauna_days":35.3,"avg_temp":35.5,"max_temp":37.4},
+  {"name":"台湾省","region":"华中/华东/华南","avg_hot_days":2.9,"avg_sauna_pct":41.3,"avg_sauna_days":97.4,"avg_temp":35.4,"max_temp":36.2},
+  {"name":"香港特别行政区","region":"华中/华东/华南","avg_hot_days":1.5,"avg_sauna_pct":17.5,"avg_sauna_days":41.1,"avg_temp":35.5,"max_temp":36.0},
+  {"name":"青海省","region":"东北/华北/西北/西南","avg_hot_days":1.0,"avg_sauna_pct":2.5,"avg_sauna_days":5.8,"avg_temp":35.6,"max_temp":37.6}
+];
+
+// --- Config ---
+const colorSouth = '#FF6B6B';
+const colorNorth = '#4ECDC4';
+const midX = 45;
+const midY = 35;
+
+// Short name formatter
+function shortName(full) {
+  return full
+    .replace('维吾尔自治区','').replace('壮族自治区','').replace('回族自治区','')
+    .replace('自治区','').replace('特别行政区','')
+    .replace('省','').replace('市','');
+}
+
+// Build series data
+const southData = [];
+const northData = [];
+rawData.forEach(d => {
+  const item = { name: d.name, value: [d.avg_hot_days, d.avg_sauna_pct, d.avg_temp], rawData: d };
+  if (d.region.includes('华南')) southData.push(item);
+  else northData.push(item);
+});
+
+// --- Chart init ---
+const chartEl = document.getElementById('chart');
+const chart = echarts.init(chartEl);
+
+// Quadrant definitions with icons & styles
+const quadrants = [
+  {
+    coord: [108, 73],
+    icon: '\u{1F525}', // 🔥
+    text: '既热又闷',
+    color: '#e74c3c',
+    bg: 'rgba(231,76,60,0.08)',
+    borderColor: 'rgba(231,76,60,0.2)',
+    fontSize: 14
+  },
+  {
+    coord: [15, 73],
+    icon: '\u{1F4A7}', // 💧
+    text: '闷而不热',
+    color: '#3498db',
+    bg: 'rgba(52,152,219,0.06)',
+    borderColor: 'rgba(52,152,219,0.15)',
+    fontSize: 12
+  },
+  {
+    coord: [108, 4],
+    icon: '\u{2600}\u{FE0F}', // ☀️
+    text: '热而不闷',
+    color: '#e67e22',
+    bg: 'rgba(230,126,34,0.06)',
+    borderColor: 'rgba(230,126,34,0.15)',
+    fontSize: 12
+  },
+  {
+    coord: [15, 4],
+    icon: '\u{1F343}', // 🍃
+    text: '清凉宜人',
+    color: '#27ae60',
+    bg: 'rgba(39,174,96,0.05)',
+    borderColor: 'rgba(39,174,96,0.12)',
+    fontSize: 12
+  }
+];
+
+const option = {
+  backgroundColor: 'transparent',
+  grid: { left: 72, right: 40, top: 40, bottom: 62 },
+  tooltip: {
+    trigger: 'item',
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderColor: 'rgba(0,0,0,0.08)',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: [10, 14],
+    extraCssText: 'box-shadow: 0 8px 24px rgba(0,0,0,0.12); backdrop-filter: blur(8px);',
+    textStyle: { color: '#333', fontSize: 12.5 },
+    formatter: function(params) {
+      const d = params.data.rawData;
+      const regionColor = d.region.includes('华南') ? colorSouth : colorNorth;
+      return `
+        <div style="font-weight:700;font-size:13.5px;margin-bottom:4px;color:#1a1a2e;">${d.name}</div>
+        <div style="display:inline-block;font-size:10.5px;color:${regionColor};background:${regionColor}15;padding:1px 8px;border-radius:8px;margin-bottom:8px;">${d.region}</div>
+        <table style="font-size:12px;line-height:1.9;color:#555;">
+          <tr><td>\u{1F321} 年均高温天数</td><td style="font-weight:700;text-align:right;padding-left:14px;color:#e74c3c;">${d.avg_hot_days} 天</td></tr>
+          <tr><td>\u{1F4A7} 桑拿天占比</td><td style="font-weight:700;text-align:right;padding-left:14px;color:#3498db;">${d.avg_sauna_pct}%</td></tr>
+          <tr><td>\u{1F975} 年均桑拿天数</td><td style="font-weight:700;text-align:right;padding-left:14px;">${d.avg_sauna_days} 天</td></tr>
+          <tr><td>\u{1F321} 平均高温日均温</td><td style="font-weight:700;text-align:right;padding-left:14px;color:#e67e22;">${d.avg_temp}\u2103</td></tr>
+          <tr><td>\u{1F525} 历史最高气温</td><td style="font-weight:700;text-align:right;padding-left:14px;color:#c0392b;">${d.max_temp}\u2103</td></tr>
+        </table>
+      `;
+    }
+  },
+  xAxis: {
+    name: '年均高温天数（天）',
+    nameLocation: 'middle', nameGap: 34,
+    nameTextStyle: { fontSize: 12.5, color: '#666', fontWeight: 600 },
+    type: 'value', min: 0, max: 130,
+    splitLine: { show: true, lineStyle: { color: 'rgba(0,0,0,0.04)' } },
+    axisLine: { lineStyle: { color: 'rgba(0,0,0,0.15)' } },
+    axisLabel: { color: '#999', fontSize: 11 },
+    axisTick: { lineStyle: { color: 'rgba(0,0,0,0.15)' } }
+  },
+  yAxis: {
+    name: '年均桑拿天占比（%）',
+    nameLocation: 'middle', nameGap: 46,
+    nameTextStyle: { fontSize: 12.5, color: '#666', fontWeight: 600 },
+    type: 'value', min: 0, max: 80,
+    splitLine: { show: true, lineStyle: { color: 'rgba(0,0,0,0.04)' } },
+    axisLine: { lineStyle: { color: 'rgba(0,0,0,0.15)' } },
+    axisLabel: { color: '#999', fontSize: 11, formatter: '{value}%' },
+    axisTick: { lineStyle: { color: 'rgba(0,0,0,0.15)' } }
+  },
+  series: [
+    // --- Quadrant backgrounds ---
+    {
+      type: 'scatter', silent: true, data: [],
+      markArea: {
+        silent: true,
+        itemStyle: { borderWidth: 1, borderType: 'dashed' },
+        data: [
+          [{ xAxis: midX, yAxis: midY, itemStyle: { color: quadrants[0].bg, borderColor: quadrants[0].borderColor } }, { xAxis: 130, yAxis: 80 }],
+          [{ xAxis: 0, yAxis: midY, itemStyle: { color: quadrants[1].bg, borderColor: quadrants[1].borderColor } }, { xAxis: midX, yAxis: 80 }],
+          [{ xAxis: midX, yAxis: 0, itemStyle: { color: quadrants[2].bg, borderColor: quadrants[2].borderColor } }, { xAxis: 130, yAxis: midY }],
+          [{ xAxis: 0, yAxis: 0, itemStyle: { color: quadrants[3].bg, borderColor: quadrants[3].borderColor } }, { xAxis: midX, yAxis: midY }]
+        ]
+      }
+    },
+    // --- Quadrant labels with icons ---
+    {
+      type: 'scatter', silent: true, data: [],
+      markPoint: {
+        symbol: 'pin', symbolSize: 0, silent: true,
+        data: quadrants.map(q => ({
+          coord: q.coord,
+          label: {
+            show: true,
+            formatter: q.icon + ' ' + q.text,
+            color: q.color,
+            fontSize: q.fontSize,
+            fontWeight: 700,
+            backgroundColor: 'rgba(255,255,255,0.75)',
+            padding: [4, 10],
+            borderRadius: 8,
+            borderColor: q.color + '30',
+            borderWidth: 1
+          }
+        }))
+      }
+    },
+    // --- Midline guides ---
+    {
+      type: 'scatter', silent: true, data: [],
+      markLine: {
+        silent: true, symbol: 'none',
+        lineStyle: { color: 'rgba(0,0,0,0.1)', type: 'dashed', width: 1 },
+        label: { show: false },
+        data: [{ xAxis: midX }, { yAxis: midY }]
+      }
+    },
+    // --- South region bubbles ---
+    {
+      name: '华中/华东/华南', type: 'scatter', data: southData,
+      symbolSize: function(data) {
+        var temp = data[2];
+        var size = 14 + (temp - 35) * 6;
+        return Math.max(12, Math.min(48, size));
+      },
+      itemStyle: {
+        color: { type: 'radial', x: 0.4, y: 0.35, r: 0.8,
+          colorStops: [
+            { offset: 0, color: 'rgba(255,138,138,0.95)' },
+            { offset: 0.7, color: 'rgba(255,107,107,0.8)' },
+            { offset: 1, color: 'rgba(230,80,80,0.65)' }
+          ]
+        },
+        opacity: 0.85,
+        shadowBlur: 10, shadowColor: 'rgba(255,107,107,0.35)',
+        borderColor: 'rgba(255,255,255,0.6)', borderWidth: 1.5
+      },
+      emphasis: {
+        itemStyle: {
+          opacity: 1, shadowBlur: 20, shadowColor: 'rgba(255,107,107,0.5)',
+          borderColor: 'rgba(255,255,255,0.9)', borderWidth: 2
+        },
+        scale: 1.2
+      },
+      label: {
+        show: true, position: 'top',
+        formatter: function(p) { return shortName(p.data.name); },
+        fontSize: 10, color: '#555', fontWeight: 600,
+        textBorderColor: 'rgba(255,255,255,0.8)', textBorderWidth: 2
+      },
+      labelLayout: { hideOverlap: true }
+    },
+    // --- North region bubbles ---
+    {
+      name: '东北/华北/西北/西南', type: 'scatter', data: northData,
+      symbolSize: function(data) {
+        var temp = data[2];
+        var size = 14 + (temp - 35) * 6;
+        return Math.max(12, Math.min(48, size));
+      },
+      itemStyle: {
+        color: { type: 'radial', x: 0.4, y: 0.35, r: 0.8,
+          colorStops: [
+            { offset: 0, color: 'rgba(120,230,220,0.95)' },
+            { offset: 0.7, color: 'rgba(78,205,196,0.8)' },
+            { offset: 1, color: 'rgba(50,170,160,0.65)' }
+          ]
+        },
+        opacity: 0.85,
+        shadowBlur: 10, shadowColor: 'rgba(78,205,196,0.35)',
+        borderColor: 'rgba(255,255,255,0.6)', borderWidth: 1.5
+      },
+      emphasis: {
+        itemStyle: {
+          opacity: 1, shadowBlur: 20, shadowColor: 'rgba(78,205,196,0.5)',
+          borderColor: 'rgba(255,255,255,0.9)', borderWidth: 2
+        },
+        scale: 1.2
+      },
+      label: {
+        show: true, position: 'top',
+        formatter: function(p) { return shortName(p.data.name); },
+        fontSize: 10, color: '#555', fontWeight: 600,
+        textBorderColor: 'rgba(255,255,255,0.8)', textBorderWidth: 2
+      },
+      labelLayout: { hideOverlap: true }
+    }
+  ]
+};
+
+chart.setOption(option);
+
+// Resize handling
+function resizeChart() {
+  chart.resize();
+}
+window.addEventListener('resize', resizeChart);
+// Initial resize after render
+setTimeout(resizeChart, 100);
+</script>
+</body>
+</html>

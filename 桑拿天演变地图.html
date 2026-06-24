@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中国桑拿天演变地图</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/js/china.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; background: transparent; overflow: hidden; font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; }
+
+#app { width: 100vw; height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+#map-wrap {
+  flex: 1; position: relative; overflow: hidden;
+  animation: heatWave 4s ease-in-out infinite;
+}
+@keyframes heatWave {
+  0%, 100% { transform: scale(1.0); }
+  50% { transform: scale(1.002); }
+}
+
+#map-container { width: 100%; height: 100%; }
+
+#steam-canvas {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 2;
+}
+
+/* ---- timeline ---- */
+#timeline {
+  height: 80px; display: flex; align-items: center; justify-content: center;
+  padding: 0 40px; gap: 0; position: relative; z-index: 10;
+  background: rgba(255,250,240,0.6);
+  backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(200,150,100,0.2);
+}
+#play-btn {
+  width: 38px; height: 38px; border-radius: 50%; border: 2px solid #EB4A23;
+  background: rgba(255,250,240,0.9); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; margin-right: 18px;
+  transition: background 0.2s; flex-shrink: 0;
+}
+#play-btn:hover { background: #EB4A23; }
+#play-btn:hover svg { fill: #fff; }
+#play-btn svg { width: 16px; height: 16px; fill: #EB4A23; }
+
+#year-track {
+  flex: 1; display: flex; align-items: center; justify-content: space-between;
+  position: relative; height: 40px;
+}
+#year-track::before {
+  content: ''; position: absolute; top: 50%; left: 0; right: 0;
+  height: 2px; background: rgba(200,150,100,0.3); transform: translateY(-50%);
+  z-index: 0;
+}
+.year-node {
+  position: relative; z-index: 1; display: flex; flex-direction: column;
+  align-items: center; cursor: pointer; transition: transform 0.2s;
+}
+.year-node:hover { transform: scale(1.15); }
+.sun-icon { width: 22px; height: 22px; margin-bottom: 2px; }
+.year-label {
+  font-size: 11px; color: #888; font-weight: 500; transition: all 0.3s;
+}
+.year-node.active .sun-icon { filter: drop-shadow(0 0 4px #F7A832); }
+.year-node.active .year-label {
+  font-size: 14px; color: #EB4A23; font-weight: 700;
+}
+
+/* ---- side panel ---- */
+#side-panel {
+  position: absolute; top: 0; right: -340px; width: 320px; height: calc(100% - 80px);
+  z-index: 20; background: rgba(255,250,240,0.92);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(200,150,100,0.25);
+  box-shadow: -4px 0 24px rgba(100,40,10,0.08);
+  transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+  display: flex; flex-direction: column;
+}
+#side-panel.open { right: 0; }
+#panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 20px 12px; border-bottom: 1px solid rgba(200,150,100,0.15);
+}
+#panel-title { font-size: 20px; font-weight: 700; color: #3a1a0a; }
+#panel-close {
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: rgba(200,150,100,0.15); cursor: pointer; display: flex;
+  align-items: center; justify-content: center; transition: background 0.2s;
+  font-size: 16px; color: #931519;
+}
+#panel-close:hover { background: rgba(200,150,100,0.35); }
+#chart-area { flex: 1; padding: 10px 12px; min-height: 0; }
+#line-chart { width: 100%; height: 100%; }
+
+/* ---- title overlay ---- */
+#map-title {
+  position: absolute; top: 12px; left: 20px; z-index: 5;
+  font-size: 22px; font-weight: 700; color: #3a1a0a;
+  text-shadow: 0 1px 3px rgba(255,255,255,0.7);
+  letter-spacing: 2px;
+}
+#year-display {
+  position: absolute; top: 40px; left: 20px; z-index: 5;
+  font-size: 42px; font-weight: 900; color: #EB4A23;
+  text-shadow: 0 2px 8px rgba(235,74,35,0.2);
+  opacity: 0.85;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map-wrap">
+    <div id="map-title">中国桑拿天演变地图</div>
+    <div id="year-display">2015</div>
+    <div id="map-container"></div>
+    <canvas id="steam-canvas"></canvas>
+    <div id="side-panel">
+      <div id="panel-header">
+        <span id="panel-title">--</span>
+        <button id="panel-close">✕</button>
+      </div>
+      <div id="chart-area">
+        <div id="line-chart"></div>
+      </div>
+    </div>
+  </div>
+  <div id="timeline">
+    <button id="play-btn">
+      <svg viewBox="0 0 24 24" id="play-icon"><polygon points="6,3 20,12 6,21"/></svg>
+    </button>
+    <div id="year-track"></div>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const YEARS = [2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025];
+const RAW = '2015,上海,25|2015,云南,106|2015,内蒙古,11|2015,北京,20|2015,台湾,76|2015,吉林,29|2015,四川,104|2015,天津,28|2015,宁夏,3|2015,安徽,61|2015,山东,50|2015,山西,33|2015,广东,165|2015,广西,153|2015,新疆,7|2015,江苏,46|2015,江西,120|2015,河北,48|2015,河南,61|2015,浙江,72|2015,海南,147|2015,湖北,75|2015,湖南,99|2015,甘肃,16|2015,福建,113|2015,西藏,19|2015,贵州,79|2015,辽宁,38|2015,重庆,73|2015,陕西,51|2015,青海,0|2015,香港,41|2015,黑龙江,30|2016,上海,56|2016,云南,125|2016,内蒙古,19|2016,北京,35|2016,台湾,82|2016,吉林,28|2016,四川,101|2016,天津,43|2016,宁夏,13|2016,安徽,77|2016,山东,72|2016,山西,53|2016,广东,167|2016,广西,174|2016,新疆,10|2016,江苏,69|2016,江西,109|2016,河北,63|2016,河南,78|2016,浙江,90|2016,海南,152|2016,湖北,87|2016,湖南,114|2016,甘肃,39|2016,福建,118|2016,西藏,35|2016,贵州,103|2016,辽宁,42|2016,重庆,82|2016,陕西,69|2016,青海,5|2016,香港,35|2016,黑龙江,27|2017,上海,64|2017,云南,115|2017,内蒙古,19|2017,北京,35|2017,台湾,113|2017,吉林,28|2017,四川,102|2017,天津,35|2017,宁夏,5|2017,安徽,84|2017,山东,67|2017,山西,40|2017,广东,152|2017,广西,150|2017,新疆,1|2017,江苏,78|2017,江西,121|2017,河北,55|2017,河南,89|2017,浙江,110|2017,海南,127|2017,湖北,80|2017,湖南,104|2017,甘肃,28|2017,福建,127|2017,西藏,37|2017,贵州,90|2017,辽宁,38|2017,重庆,67|2017,陕西,48|2017,青海,3|2017,香港,41|2017,黑龙江,30|2018,上海,64|2018,云南,91|2018,内蒙古,41|2018,北京,42|2018,台湾,82|2018,吉林,31|2018,四川,104|2018,天津,48|2018,宁夏,23|2018,安徽,100|2018,山东,72|2018,山西,58|2018,广东,146|2018,广西,149|2018,新疆,4|2018,江苏,89|2018,江西,122|2018,河北,62|2018,河南,83|2018,浙江,110|2018,海南,120|2018,湖北,97|2018,湖南,111|2018,甘肃,48|2018,福建,131|2018,西藏,27|2018,贵州,113|2018,辽宁,43|2018,重庆,81|2018,陕西,71|2018,青海,7|2018,香港,31|2018,黑龙江,24|2019,上海,43|2019,云南,124|2019,内蒙古,26|2019,北京,39|2019,台湾,80|2019,吉林,25|2019,四川,97|2019,天津,46|2019,宁夏,3|2019,安徽,99|2019,山东,61|2019,山西,26|2019,广东,160|2019,广西,150|2019,新疆,1|2019,江苏,77|2019,江西,114|2019,河北,55|2019,河南,72|2019,浙江,98|2019,海南,168|2019,湖北,98|2019,湖南,102|2019,甘肃,27|2019,福建,125|2019,西藏,37|2019,贵州,116|2019,辽宁,33|2019,重庆,67|2019,陕西,45|2019,青海,1|2019,香港,44|2019,黑龙江,14|2020,上海,51|2020,云南,119|2020,内蒙古,21|2020,北京,28|2020,台湾,120|2020,吉林,26|2020,四川,108|2020,天津,38|2020,宁夏,7|2020,安徽,92|2020,山东,71|2020,山西,32|2020,广东,163|2020,广西,149|2020,新疆,0|2020,江苏,81|2020,江西,118|2020,河北,59|2020,河南,68|2020,浙江,98|2020,海南,151|2020,湖北,94|2020,湖南,109|2020,甘肃,21|2020,福建,125|2020,西藏,19|2020,贵州,108|2020,辽宁,45|2020,重庆,80|2020,陕西,49|2020,青海,0|2020,香港,42|2020,黑龙江,27|2021,上海,54|2021,云南,122|2021,内蒙古,44|2021,北京,19|2021,台湾,108|2021,吉林,25|2021,四川,116|2021,天津,26|2021,宁夏,4|2021,安徽,105|2021,山东,74|2021,山西,40|2021,广东,179|2021,广西,172|2021,新疆,1|2021,江苏,96|2021,江西,144|2021,河北,60|2021,河南,93|2021,浙江,126|2021,海南,157|2021,湖北,107|2021,湖南,126|2021,甘肃,19|2021,福建,154|2021,西藏,49|2021,贵州,125|2021,辽宁,21|2021,重庆,84|2021,陕西,56|2021,青海,7|2021,香港,38|2021,黑龙江,26|2022,上海,70|2022,云南,109|2022,内蒙古,33|2022,北京,39|2022,台湾,91|2022,吉林,12|2022,四川,95|2022,天津,46|2022,宁夏,17|2022,安徽,107|2022,山东,75|2022,山西,42|2022,广东,128|2022,广西,136|2022,新疆,0|2022,江苏,91|2022,江西,84|2022,河北,60|2022,河南,75|2022,浙江,100|2022,海南,124|2022,湖北,102|2022,湖南,82|2022,甘肃,30|2022,福建,109|2022,西藏,36|2022,贵州,99|2022,辽宁,31|2022,重庆,70|2022,陕西,59|2022,青海,14|2022,香港,46|2022,黑龙江,14|2023,上海,58|2023,云南,110|2023,内蒙古,22|2023,北京,25|2023,台湾,91|2023,吉林,24|2023,四川,133|2023,天津,36|2023,宁夏,9|2023,安徽,96|2023,山东,76|2023,山西,36|2023,广东,145|2023,广西,158|2023,新疆,0|2023,江苏,91|2023,江西,118|2023,河北,47|2023,河南,86|2023,浙江,117|2023,海南,143|2023,湖北,100|2023,湖南,113|2023,甘肃,9|2023,福建,121|2023,西藏,34|2023,贵州,131|2023,辽宁,51|2023,重庆,84|2023,陕西,49|2023,青海,7|2023,香港,44|2023,黑龙江,15|2024,上海,75|2024,云南,130|2024,内蒙古,38|2024,北京,38|2024,台湾,105|2024,吉林,27|2024,四川,126|2024,天津,48|2024,宁夏,10|2024,安徽,114|2024,山东,72|2024,山西,64|2024,广东,150|2024,广西,152|2024,新疆,0|2024,江苏,101|2024,江西,113|2024,河北,63|2024,河南,88|2024,浙江,105|2024,海南,160|2024,湖北,114|2024,湖南,109|2024,甘肃,34|2024,福建,116|2024,西藏,58|2024,贵州,125|2024,辽宁,44|2024,重庆,95|2024,陕西,90|2024,青海,9|2024,香港,45|2024,黑龙江,22|2025,上海,90|2025,云南,128|2025,内蒙古,46|2025,北京,41|2025,台湾,123|2025,吉林,31|2025,四川,128|2025,天津,47|2025,宁夏,17|2025,安徽,126|2025,山东,77|2025,山西,51|2025,广东,171|2025,广西,168|2025,新疆,1|2025,江苏,114|2025,江西,147|2025,河北,77|2025,河南,80|2025,浙江,148|2025,海南,136|2025,湖北,117|2025,湖南,133|2025,甘肃,30|2025,福建,154|2025,西藏,37|2025,贵州,111|2025,辽宁,39|2025,重庆,106|2025,陕西,63|2025,青海,11|2025,香港,45|2025,黑龙江,33';
+
+// Parse data
+const data = {};
+RAW.split('|').forEach(s => {
+  const parts = s.split(',');
+  const y = parts[0], p = parts[1], d = parseInt(parts[2]);
+  if (!data[y]) data[y] = {};
+  data[y][p] = d;
+});
+
+// All province names
+const ALL_PROVINCES = Object.keys(data['2025']);
+
+// Province center coordinates (lng, lat) for steam particles
+const PROV_CENTERS = {
+  '上海':[121.47,31.23],'云南':[102.71,25.05],'内蒙古':[111.75,40.84],'北京':[116.41,39.90],
+  '台湾':[120.96,23.70],'吉林':[126.55,43.84],'四川':[104.07,30.67],'天津':[117.20,39.13],
+  '宁夏':[106.27,38.47],'安徽':[117.28,31.86],'山东':[117.00,36.67],'山西':[112.55,37.87],
+  '广东':[113.26,23.13],'广西':[108.33,22.84],'新疆':[87.62,43.83],'江苏':[118.76,32.06],
+  '江西':[115.89,28.68],'河北':[114.50,38.04],'河南':[113.65,34.76],'浙江':[120.15,30.28],
+  '海南':[110.35,20.02],'湖北':[114.34,30.55],'湖南':[112.98,28.19],'甘肃':[103.83,36.06],
+  '福建':[119.30,26.08],'西藏':[91.11,29.97],'贵州':[106.71,26.57],'辽宁':[123.43,41.80],
+  '重庆':[106.55,29.56],'陕西':[108.95,34.27],'青海':[96.78,36.62],'香港':[114.17,22.32],
+  '黑龙江':[126.64,45.75]
+};
+
+let currentYear = 2015;
+let playing = false;
+let playTimer = null;
+let selectedProvince = null;
+let mapChart = null;
+let lineChart = null;
+let cachedPixelPositions = null;
+
+// ===== SUN SVG ICON =====
+function sunSVG(active) {
+  const fill = active ? '#EB4A23' : '#c8a070';
+  const r = active ? 8 : 6;
+  const rays = active ? 10 : 8;
+  let paths = '<circle cx="12" cy="12" r="' + r + '" fill="' + fill + '"/>';
+  for (let i = 0; i < rays; i++) {
+    const angle = (i * 360 / rays) * Math.PI / 180;
+    const x1 = 12 + Math.cos(angle) * (r + 2);
+    const y1 = 12 + Math.sin(angle) * (r + 2);
+    const x2 = 12 + Math.cos(angle) * (r + (active ? 5 : 4));
+    const y2 = 12 + Math.sin(angle) * (r + (active ? 5 : 4));
+    paths += '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+fill+'" stroke-width="'+(active?2:1.2)+'" stroke-linecap="round"/>';
+  }
+  return '<svg class="sun-icon" viewBox="0 0 24 24">' + paths + '</svg>';
+}
+
+// ===== BUILD TIMELINE =====
+const track = document.getElementById('year-track');
+YEARS.forEach(y => {
+  const node = document.createElement('div');
+  node.className = 'year-node' + (y === currentYear ? ' active' : '');
+  node.dataset.year = y;
+  node.innerHTML = sunSVG(y === currentYear) + '<span class="year-label">' + y + '</span>';
+  node.addEventListener('click', function() { goToYear(y); });
+  track.appendChild(node);
+});
+
+function updateTimeline() {
+  document.querySelectorAll('.year-node').forEach(n => {
+    const y = parseInt(n.dataset.year);
+    const isActive = y === currentYear;
+    n.className = 'year-node' + (isActive ? ' active' : '');
+    n.innerHTML = sunSVG(isActive) + '<span class="year-label">' + y + '</span>';
+  });
+}
+
+// ===== PLAY / PAUSE =====
+const playBtn = document.getElementById('play-btn');
+const playIcon = document.getElementById('play-icon');
+
+function setPlaying(val) {
+  playing = val;
+  if (playing) {
+    playIcon.innerHTML = '<rect x="5" y="4" width="4" height="16"/><rect x="15" y="4" width="4" height="16"/>';
+    playTimer = setInterval(function() {
+      var idx = YEARS.indexOf(currentYear);
+      idx = (idx + 1) % YEARS.length;
+      goToYear(YEARS[idx]);
+    }, 500);
+  } else {
+    playIcon.innerHTML = '<polygon points="6,3 20,12 6,21"/>';
+    clearInterval(playTimer);
+    playTimer = null;
+  }
+}
+
+playBtn.addEventListener('click', function() { setPlaying(!playing); });
+
+function goToYear(y) {
+  currentYear = y;
+  document.getElementById('year-display').textContent = y;
+  updateTimeline();
+  updateMap();
+}
+
+// ===== MAP INIT =====
+function getMapData(year) {
+  var yd = data[year];
+  return ALL_PROVINCES.map(function(p) {
+    return { name: p, value: yd[p] !== undefined ? yd[p] : -1 };
+  });
+}
+
+function initMap() {
+  mapChart = echarts.init(document.getElementById('map-container'));
+  updateMap();
+
+  mapChart.on('click', function(params) {
+    if (params.componentType === 'series') {
+      selectedProvince = params.name;
+      highlightProvince(params.name);
+      openPanel(params.name);
+    }
+  });
+
+  // Cache pixel positions after map renders
+  setTimeout(cachePixelPositions, 1200);
+
+  window.addEventListener('resize', function() {
+    mapChart.resize();
+    if (lineChart) lineChart.resize();
+    resizeSteamCanvas();
+    cachePixelPositions();
+  });
+}
+
+function cachePixelPositions() {
+  cachedPixelPositions = {};
+  if (!mapChart) return;
+  ALL_PROVINCES.forEach(function(name) {
+    var center = PROV_CENTERS[name];
+    if (center) {
+      try {
+        var pixel = mapChart.convertToPixel({seriesIndex: 0}, center);
+        if (pixel) cachedPixelPositions[name] = pixel;
+      } catch(e) {
+        // Fallback: approximate position based on container size
+        var container = document.getElementById('map-container');
+        var w = container.offsetWidth, h = container.offsetHeight;
+        var lng = center[0], lat = center[1];
+        // Simple linear mapping for China (73-135 lng, 18-54 lat)
+        var px = ((lng - 73) / (135 - 73)) * w * 0.85 + w * 0.07;
+        var py = ((54 - lat) / (54 - 18)) * h * 0.85 + h * 0.07;
+        cachedPixelPositions[name] = [px, py];
+      }
+    }
+  });
+}
+
+function updateMap() {
+  var mapData = getMapData(currentYear);
+  var option = {
+    tooltip: {
+      trigger: 'item',
+      formatter: function(p) {
+        if (p.value === -1 || p.value === undefined) return p.name + '<br/>桑拿天：暂无数据';
+        return '<b>' + p.name + '</b><br/>桑拿天天数：' + p.value + ' 天';
+      },
+      backgroundColor: 'rgba(255,250,240,0.92)',
+      borderColor: '#e0a060',
+      textStyle: { color: '#3a1a0a' },
+      cursor: 'pointer'
+    },
+    visualMap: {
+      min: 0,
+      max: 180,
+      left: 20,
+      bottom: 20,
+      text: ['多', '少'],
+      textStyle: { color: '#8a5a3a', fontSize: 12 },
+      inRange: {
+        color: ['#FFFBC5','#FED45F','#F7A832','#F77B32','#E85D28','#EB4A23','#C22E1C','#931519','#7D1419','#68161A']
+      },
+      calculable: true,
+      orient: 'vertical',
+      itemWidth: 14,
+      itemHeight: 120
+    },
+    series: [{
+      name: '桑拿天',
+      type: 'map',
+      map: 'china',
+      roam: false,
+      data: mapData,
+      center: [104.5, 36],
+      zoom: 1.15,
+      itemStyle: {
+        areaColor: '#e8e8e8',
+        borderColor: '#cccccc',
+        borderWidth: 1
+      },
+      emphasis: {
+        itemStyle: {
+          areaColor: '#ffd080',
+          borderColor: '#e06020',
+          borderWidth: 3
+        },
+        label: { show: false }
+      },
+      select: {
+        itemStyle: {
+          borderColor: '#e06020',
+          borderWidth: 3
+        }
+      },
+      label: { show: false }
+    }]
+  };
+  mapChart.setOption(option, true);
+
+  if (selectedProvince) {
+    setTimeout(function() { highlightProvince(selectedProvince); }, 50);
+  }
+}
+
+function highlightProvince(name) {
+  mapChart.dispatchAction({ type: 'select', name: name });
+}
+
+// ===== SIDE PANEL =====
+var sidePanel = document.getElementById('side-panel');
+var panelTitle = document.getElementById('panel-title');
+var panelClose = document.getElementById('panel-close');
+
+panelClose.addEventListener('click', function() {
+  sidePanel.classList.remove('open');
+  selectedProvince = null;
+  mapChart.dispatchAction({ type: 'unselect', seriesIndex: 0 });
+});
+
+function openPanel(province) {
+  panelTitle.textContent = province;
+  sidePanel.classList.add('open');
+  setTimeout(function() { renderLineChart(province); }, 120);
+}
+
+function renderLineChart(province) {
+  if (!lineChart) {
+    lineChart = echarts.init(document.getElementById('line-chart'));
+  }
+  var seriesData = YEARS.map(function(y) { return data[y][province] !== undefined ? data[y][province] : 0; });
+
+  var option = {
+    grid: { top: 35, right: 20, bottom: 30, left: 45 },
+    title: {
+      text: province + ' 桑拿天天数变化',
+      left: 'center',
+      textStyle: { fontSize: 13, color: '#8a5a3a', fontWeight: 'normal' }
+    },
+    xAxis: {
+      type: 'category',
+      data: YEARS.map(String),
+      axisLine: { lineStyle: { color: '#c8a070' } },
+      axisLabel: { color: '#8a5a3a', fontSize: 10 },
+      axisTick: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      name: '天数',
+      nameTextStyle: { color: '#8a5a3a', fontSize: 10 },
+      axisLine: { show: false },
+      axisLabel: { color: '#8a5a3a', fontSize: 10 },
+      splitLine: { lineStyle: { color: 'rgba(200,150,100,0.15)' } }
+    },
+    series: [{
+      type: 'line',
+      data: seriesData,
+      smooth: true,
+      lineStyle: { color: '#EB4A23', width: 2.5 },
+      itemStyle: { color: '#931519', borderWidth: 2 },
+      areaStyle: {
+        color: {
+          type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(235,74,35,0.25)' },
+            { offset: 1, color: 'rgba(235,74,35,0.02)' }
+          ]
+        }
+      },
+      symbolSize: function(value, params) {
+        var idx = params.dataIndex;
+        return (idx === 0 || idx === YEARS.length - 1) ? 10 : 4;
+      },
+      label: {
+        show: true,
+        formatter: function(params) {
+          var idx = params.dataIndex;
+          return (idx === 0 || idx === YEARS.length - 1) ? params.value + '天' : '';
+        },
+        color: '#931519',
+        fontWeight: 'bold',
+        fontSize: 12,
+        position: 'top'
+      },
+      animationDuration: 600
+    }],
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255,250,240,0.92)',
+      borderColor: '#e0a060',
+      textStyle: { color: '#3a1a0a' },
+      formatter: function(params) {
+        return params[0].name + '年<br/>桑拿天：' + params[0].value + ' 天';
+      }
+    }
+  };
+  lineChart.setOption(option, true);
+  lineChart.resize();
+}
+
+// ===== STEAM PARTICLES =====
+var steamCanvas = document.getElementById('steam-canvas');
+var ctx = steamCanvas.getContext('2d');
+var particles = [];
+
+function resizeSteamCanvas() {
+  steamCanvas.width = steamCanvas.offsetWidth;
+  steamCanvas.height = steamCanvas.offsetHeight;
+}
+resizeSteamCanvas();
+
+function Particle(x, y, intensity) {
+  this.x = x + (Math.random() - 0.5) * 30;
+  this.y = y;
+  this.originX = this.x;
+  this.vy = -(0.3 + Math.random() * 0.8) * (0.5 + intensity * 0.012);
+  this.vx = (Math.random() - 0.5) * 0.3;
+  this.radius = 1.5 + Math.random() * 2.5;
+  this.opacity = 0.12 + Math.random() * 0.18 + Math.min(intensity * 0.002, 0.15);
+  this.life = 0;
+  this.maxLife = 80 + Math.random() * 60;
+  this.wobbleSpeed = 0.02 + Math.random() * 0.03;
+  this.wobbleAmp = 1 + Math.random() * 2;
+  this.currentOpacity = this.opacity;
+  this.currentRadius = this.radius;
+}
+Particle.prototype.update = function() {
+  this.life++;
+  this.y += this.vy;
+  this.x = this.originX + Math.sin(this.life * this.wobbleSpeed) * this.wobbleAmp;
+  this.originX += this.vx * 0.1;
+  var lifeRatio = this.life / this.maxLife;
+  this.currentOpacity = this.opacity * (1 - lifeRatio);
+  this.currentRadius = this.radius * (1 - lifeRatio * 0.3);
+  return this.life < this.maxLife && this.currentOpacity > 0.01;
+};
+Particle.prototype.draw = function(ctx) {
+  ctx.beginPath();
+  ctx.arc(this.x, this.y, this.currentRadius, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,' + this.currentOpacity + ')';
+  ctx.fill();
+};
+
+var frameCount = 0;
+function animateSteam() {
+  ctx.clearRect(0, 0, steamCanvas.width, steamCanvas.height);
+  frameCount++;
+
+  // Spawn new particles
+  if (frameCount % 3 === 0 && cachedPixelPositions) {
+    var yd = data[currentYear];
+    ALL_PROVINCES.forEach(function(prov) {
+      var days = yd[prov] || 0;
+      if (days <= 0) return;
+      var pos = cachedPixelPositions[prov];
+      if (!pos) return;
+      var count = Math.ceil(days / 40);
+      for (var i = 0; i < count; i++) {
+        if (Math.random() < 0.35) {
+          particles.push(new Particle(pos[0], pos[1], days));
+        }
+      }
+    });
+  }
+
+  // Limit total particles
+  if (particles.length > 800) {
+    particles = particles.slice(particles.length - 800);
+  }
+
+  var alive = [];
+  for (var i = 0; i < particles.length; i++) {
+    if (particles[i].update()) {
+      particles[i].draw(ctx);
+      alive.push(particles[i]);
+    }
+  }
+  particles = alive;
+
+  requestAnimationFrame(animateSteam);
+}
+
+// ===== INIT =====
+function init() {
+  initMap();
+  setTimeout(function() {
+    resizeSteamCanvas();
+    animateSteam();
+  }, 1500);
+}
+
+if (typeof echarts !== 'undefined') {
+  init();
+} else {
+  window.addEventListener('load', init);
+}
+</script>
+</body>
+</html>

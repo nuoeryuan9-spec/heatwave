@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>体感温度 · 热力矩阵</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --c1: #FFFBC5;  /* light yellow */
+    --c2: #FED45F;  /* yellow */
+    --c3: #F77B32;  /* orange */
+    --c4: #EB4A23;  /* deep orange */
+    --c5: #931519;  /* red */
+    --c6: #68161A;  /* crimson */
+    --bg: #FFFBF5;
+    --text: #3D1F1A;
+    --text-light: #8C6B62;
+    --card-bg: rgba(255,255,255,0.85);
+  }
+
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== Header ===== */
+  .hero {
+    text-align: center;
+    padding: 48px 20px 32px;
+    position: relative;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--c4), var(--c5));
+    color: white;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    animation: fadeDown 0.8s ease-out;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, var(--c3), var(--c5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: fadeDown 0.8s ease-out 0.1s both;
+  }
+  .hero p {
+    color: var(--text-light);
+    font-size: 15px;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.7;
+    animation: fadeDown 0.8s ease-out 0.2s both;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== Floating particles ===== */
+  .particles {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .particle {
+    position: absolute;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    opacity: 0.25;
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 0.25; }
+      90% { opacity: 0.25; }
+    100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+  }
+
+  /* ===== Main Layout ===== */
+  .main {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+  }
+
+  /* ===== Section Titles ===== */
+  .section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    animation: fadeUp 0.7s ease-out both;
+  }
+  .section-label .num {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--c3), var(--c4));
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .section-label span {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ===== Heat Matrix ===== */
+  .matrix-wrap {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 40px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(235,74,35,0.08);
+    animation: fadeUp 0.7s ease-out 0.15s both;
+  }
+
+  .matrix-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .matrix-table {
+    border-collapse: separate;
+    border-spacing: 2px;
+    min-width: 100%;
+  }
+
+  .matrix-table th {
+    padding: 8px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-light);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .matrix-table td {
+    width: 42px;
+    height: 38px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    user-select: none;
+  }
+
+  .matrix-table td:hover {
+    transform: scale(1.2);
+    z-index: 10;
+    box-shadow: 0 4px 16px rgba(147,21,25,0.25);
+  }
+
+  .matrix-table td.selected {
+    outline: 3px solid var(--text);
+    outline-offset: 2px;
+    transform: scale(1.25);
+    z-index: 11;
+    box-shadow: 0 6px 24px rgba(147,21,25,0.35);
+  }
+
+  .row-label {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 11px;
+    padding-right: 8px !important;
+    background: transparent !important;
+    cursor: default !important;
+  }
+  .row-label:hover { transform: none !important; box-shadow: none !important; }
+
+  .col-header {
+    background: transparent !important;
+    cursor: default !important;
+  }
+  .col-header:hover { transform: none !important; }
+
+  /* ===== Color Legend ===== */
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .legend-bar {
+    height: 14px;
+    width: 200px;
+    border-radius: 7px;
+    background: linear-gradient(to right, var(--c1), var(--c2), var(--c3), var(--c4), var(--c5), var(--c6));
+  }
+  .legend-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 200px;
+    font-size: 10px;
+    color: var(--text-light);
+    margin-top: 3px;
+  }
+
+  .danger-tags {
+    display: flex;
+    gap: 12px;
+    margin-left: 16px;
+    flex-wrap: wrap;
+  }
+  .dtag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-weight: 500;
+  }
+
+  /* ===== Calculator Card ===== */
+  .calc-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.95), rgba(255,250,245,0.9));
+    border-radius: 24px;
+    padding: 32px;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(235,74,35,0.1);
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.7s ease-out 0.3s both;
+  }
+
+  .calc-card::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -30%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(235,74,35,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .calc-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (max-width: 680px) {
+    .calc-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Slider Controls */
+  .ctrl-group { margin-bottom: 22px; }
+  .ctrl-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .ctrl-label strong {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .ctrl-value {
+    font-size: 26px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--c4), var(--c5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(to right, var(--c1), var(--c2), var(--c3), var(--c4), var(--c5));
+    cursor: pointer;
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid var(--c4);
+    box-shadow: 0 2px 10px rgba(147,21,25,0.3);
+    cursor: grab;
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+  input[type=range]::-webkit-slider-thumb:active { cursor: grabbing; }
+  input[type=range]::-moz-range-thumb {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid var(--c4);
+    box-shadow: 0 2px 10px rgba(147,21,25,0.3);
+    cursor: grab;
+  }
+
+  /* Result Display */
+  .result-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.6);
+    border: 1px solid rgba(235,74,35,0.08);
+    min-height: 200px;
+    position: relative;
+  }
+
+  .result-ring {
+    width: 150px; height: 150px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    position: relative;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .result-ring::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 3px dashed;
+    opacity: 0.3;
+    animation: spinSlow 20s linear infinite;
+  }
+  @keyframes spinSlow { to { transform: rotate(360deg); } }
+
+  .result-temp {
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1;
+    transition: color 0.4s;
+  }
+  .result-unit {
+    font-size: 14px;
+    font-weight: 500;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+  .result-diff {
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 3px 12px;
+    border-radius: 10px;
+  }
+  .result-level {
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 4px 16px;
+    border-radius: 12px;
+  }
+
+  /* Risk meter */
+  .risk-meter {
+    width: 100%;
+    margin-top: 16px;
+  }
+  .risk-track {
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(to right,
+      #4CAF50 0%, #8BC34A 20%, #FFEB3B 36%,
+      #FF9800 50%, #FF5722 66%, #F44336 82%, #931519 100%
+    );
+    position: relative;
+    margin-bottom: 6px;
+  }
+  .risk-pointer {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid var(--text);
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 2;
+  }
+  .risk-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-light);
+  }
+
+  /* Pulse animation for high danger */
+  @keyframes dangerPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(235,74,35,0.3); }
+    50% { box-shadow: 0 0 0 16px rgba(235,74,35,0); }
+  }
+  .pulse-danger { animation: dangerPulse 1.5s ease-in-out infinite; }
+
+  /* ===== Insight Cards ===== */
+  .insights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 32px;
+    animation: fadeUp 0.7s ease-out 0.4s both;
+  }
+  .insight-card {
+    background: var(--card-bg);
+    border-radius: 14px;
+    padding: 18px 20px;
+    border: 1px solid rgba(235,74,35,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .insight-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(147,21,25,0.08);
+  }
+  .insight-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+  .insight-card h3 {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .insight-card p {
+    font-size: 12px;
+    color: var(--text-light);
+    line-height: 1.6;
+  }
+
+  /* ===== Tooltip ===== */
+  .tooltip {
+    position: fixed;
+    background: var(--text);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.15s;
+    max-width: 200px;
+    line-height: 1.5;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+  .tooltip.visible { opacity: 1; }
+
+  /* ===== Footer note ===== */
+  .footnote {
+    text-align: center;
+    margin-top: 40px;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--text-light);
+    opacity: 0.7;
+    animation: fadeUp 0.7s ease-out 0.5s both;
+  }
+
+  /* ===== Formula display ===== */
+  .formula-bar {
+    background: rgba(147,21,25,0.04);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--text-light);
+    text-align: center;
+    font-family: "SF Mono", Consolas, monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- Floating heat particles -->
+<div class="particles" id="particles"></div>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-badge">NOAA Heat Index</div>
+  <h1>体感温度 · 热力矩阵</h1>
+  <p>当气温与湿度叠加，你的身体感受到的真实温度远超想象。拖动滑块，探索热指数的隐形威胁。</p>
+</div>
+
+<div class="main">
+
+  <!-- === SECTION 1: Heat Matrix === -->
+  <div class="section-label">
+    <div class="num">01</div><span>热力矩阵图</span>
+  </div>
+  <div class="matrix-wrap">
+    <div class="matrix-scroll">
+      <table class="matrix-table" id="matrix"></table>
+    </div>
+    <div style="display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:16px;">
+      <div>
+        <div class="legend">
+          <div class="legend-bar"></div>
+        </div>
+        <div class="legend-labels">
+          <span>27°C 舒适</span>
+          <span>54°C 极危</span>
+        </div>
+      </div>
+      <div class="danger-tags">
+        <span class="dtag" style="background:#FFFBC5;color:#8B6914;">⚡ 谨慎</span>
+        <span class="dtag" style="background:#FED45F;color:#8B6914;">☀️ 危险</span>
+        <span class="dtag" style="background:#F77B32;color:#fff;">🔥 极危</span>
+        <span class="dtag" style="background:#931519;color:#fff;">💀 致命</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- === SECTION 2: Interactive Calculator === -->
+  <div class="section-label" style="margin-top:8px;">
+    <div class="num">02</div><span>交互式温度计算器</span>
+  </div>
+  <div class="calc-card">
+    <div class="calc-grid">
+      <!-- Left: Controls -->
+      <div>
+        <div class="ctrl-group">
+          <div class="ctrl-label">
+            <strong>🌡 实际气温</strong>
+            <span class="result-value" id="tempDisplay">35°C</span>
+          </div>
+          <input type="range" id="tempSlider" min="25" max="46" value="35" step="1">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-light);margin-top:4px;">
+            <span>25°C</span><span>46°C</span>
+          </div>
+        </div>
+        <div class="ctrl-group">
+          <div class="ctrl-label">
+            <strong>💧 相对湿度</strong>
+            <span class="result-value" id="humidDisplay">70%</span>
+          </div>
+          <input type="range" id="humidSlider" min="20" max="100" value="70" step="1">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-light);margin-top:4px;">
+            <span>20%</span><span>100%</span>
+          </div>
+        </div>
+        <div class="formula-bar">
+          NOAA Heat Index Formula (Rothfusz 1990)
+        </div>
+      </div>
+      <!-- Right: Result -->
+      <div class="result-panel">
+        <div class="result-ring" id="resultRing">
+          <span class="result-temp" id="resultTemp">50.3</span>
+          <span class="result-unit">°C 体感温度</span>
+          <div class="result-diff" id="resultDiff">+15.3°C 高于实际</div>
+          <div class="result-level" id="resultLevel">⚠️ 危险</div>
+        </div>
+        <div class="risk-meter">
+          <div class="risk-track"><div class="risk-pointer" id="riskPointer"></div></div>
+          <div class="risk-labels">
+            <span>舒适</span><span>注意</span><span>谨慎</span><span>危险</span><span>极危</span><span>致命</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Insights -->
+  <div class="insights">
+    <div class="insight-card">
+      <div class="insight-icon" style="background:rgba(254,212,95,0.2);">📊</div>
+      <h3>湿度放大效应</h3>
+      <p>湿度每上升 10%，体感温度可增加 2-4°C。高湿环境下，汗水无法蒸发，人体自然降温机制失效。</p>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="rgba(235,74,35,0.15);">⚠️</div>
+      <h3>桑拿天阈值</h3>
+      <p>当体感温度超过 40°C 时进入「桑拿天」区间；超过 51°C 为极高风险，户外活动可能引发中暑。</p>
+    </div>
+    <div class="insight-card">
+      <div class="insight-icon" style="background:rgba(147,21,25,0.1);">🔬</div>
+      <h3>数据来源</h3>
+      <p>基于美国国家海洋和大气管理局（NOAA）Rothfusz 1990 热指数标准算法计算。</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footnote">
+    数据可视化 · 高温热浪时代风险图谱与生命防线项目<br>
+    体感温度数据基于 NOAA 标准算法生成 | 仅供参考，不构成医学建议
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ========== Color Interpolation ==========
+const COLORS = ['#FFFBC5','#FED45F','#F77B32','#EB4A23','#931519','#68161A'];
+const TEMP_MIN = 27, TEMP_MAX = 54;
+
+function interpColor(val) {
+  const t = Math.max(0, Math.min(1, (val - TEMP_MIN) / (TEMP_MAX - TEMP_MIN)));
+  const idx = t * (COLORS.length - 1);
+  const lo = Math.floor(idx), hi = Math.min(lo + 1, COLORS.length - 1);
+  const f = idx - lo;
+  return lerpHex(COLORS[lo], COLORS[hi], f);
+}
+
+function lerpHex(a, b, f) {
+  const ra = parseInt(a.slice(1,3),16), ga = parseInt(a.slice(3,5),16), ba = parseInt(a.slice(5,7),16);
+  const rb = parseInt(b.slice(1,3),16), gb = parseInt(b.slice(3,5),16), bb = parseInt(b.slice(5,7),16);
+  const r = Math.round(ra + (rb-ra)*f), g = Math.round(ga + (gb-ga)*f), b_ = Math.round(ba + (bb-ba)*f);
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b_.toString(16).padStart(2,'0')}`;
+}
+
+// ========== Heat Index Calculation (NOAA Rothfusz) ==========
+function calcHeatIndexC(tempC, rh) {
+  const T = tempC * 9/5 + 32; // to Fahrenheit
+  if (T < 80) return tempC; // simplified for low temps
+  let HI = -42.379 + 2.04901523*T + 10.14333127*rh - 0.22475541*T*rh
+       - 0.00683783*T*T - 0.05481717*rh*rh + 0.00122874*T*T*rh
+       + 0.00085282*T*rh*rh - 0.00000199*T*T*rh*rh;
+  // Adjustment for low RH extremes
+  if (rh < 13 && T >= 80 && T <= 112) {
+    HI -= ((13-rh)/4) * Math.sqrt((17-Math.abs(T-95))/17);
+  } else if (rh > 85 && T >= 80 && T <= 87) {
+    HI += ((rh-85)/10) * ((95-T)/10);
+  }
+  return ((HI - 32) * 5/9); // back to Celsius
+}
+
+// ========== Build Matrix ==========
+const TEMPS = [26,28,30,32,34,36,38,40,42,44,46];
+const HUMIDS = [30,35,40,45,50,55,60,65,70,75,80,85,90,95,100];
+let selectedCell = null;
+
+function buildMatrix() {
+  const table = document.getElementById('matrix');
+  let html = '<tr><th></th>';
+  HUMIDS.forEach(h => { html += `<th>${h}%</th>`; });
+  html += '</tr>';
+
+  TEMPS.forEach(t => {
+    html += `<tr><td class="row-label">${t}°</td>`;
+    HUMIDS.forEach(h => {
+      const hi = calcHeatIndexC(t, h);
+      const cl = interpColor(hi);
+      const bright = hi > 48 ? '#fff' : '#3D1F1A';
+      html += `<td data-t="${t}" data-h="${h}" data-hi="${hi.toFixed(1)}"
+                style="background:${cl};color:${bright}"
+                onmouseenter="showTip(event,this)" onmouseleave="hideTip()"
+                onclick="selectCell(this)">${Math.round(hi)}</td>`;
+    });
+    html += '</tr>';
+  });
+  table.innerHTML = html;
+}
+buildMatrix();
+
+// Matrix interactions
+const tooltip = document.getElementById('tooltip');
+function showTip(el) {
+  const t = el.dataset.t, h = el.dataset.h, hi = el.dataset.hi;
+  tooltip.innerHTML = `<strong>${t}°C × ${h}%RH</strong><br>体感 ${hi}°C`;
+  tooltip.classList.add('visible');
+}
+function hideTip() { tooltip.classList.remove('visible'); }
+document.addEventListener('mousemove', e => {
+  if (tooltip.classList.contains('visible')) {
+    tooltip.style.left = (e.clientX + 14) + 'px';
+    tooltip.style.top = (e.clientY + 14) + 'px';
+  }
+});
+
+function selectCell(el) {
+  if (selectedCell) selectedCell.classList.remove('selected');
+  selectedCell = el;
+  el.classList.add('selected');
+  // Sync sliders
+  document.getElementById('tempSlider').value = el.dataset.t;
+  document.getElementById('humidSlider').value = el.dataset.h;
+  updateCalc();
+}
+
+// ========== Calculator Logic ==========
+const tempSlider = document.getElementById('tempSlider');
+const humidSlider = document.getElementById('humidSlider');
+
+function updateCalc() {
+  const T = +tempSlider.value;
+  const H = +humidSlider.value;
+  const HI = calcHeatIndexC(T, H);
+
+  document.getElementById('tempDisplay').textContent = T + '°C';
+  document.getElementById('humidDisplay').textContent = H + '%';
+  document.getElementById('resultTemp').textContent = HI.toFixed(1);
+  const diff = HI - T;
+  const diffEl = document.getElementById('resultDiff');
+  diffEl.textContent = (diff >= 0 ? '+' : '') + diff.toFixed(1) + '°C ' + (diff >= 0 ? '高于' : '低于') + '实际';
+  diffEl.style.background = diff > 10 ? 'rgba(235,74,35,0.12)' :
+                           diff > 5 ? 'rgba(247,123,50,0.12)' : 'rgba(76,175,80,0.12)';
+
+  // Color & level
+  const ring = document.getElementById('resultRing');
+  const levelEl = document.getElementById('resultLevel');
+  const resultTempEl = document.getElementById('resultTemp');
+  const cl = interpColor(HI);
+  const bright = HI > 47 ? '#fff' : '#3D1F1A';
+  ring.style.background = `linear-gradient(145deg,${cl},${interpColor(Math.min(HI+5,TEMP_MAX))})`;
+  ring.style.color = bright;
+  resultTempEl.style.color = bright;
+
+  let level, lvlBg;
+  if (HI < 32) { level='舒适'; lvlBg='rgba(76,175,80,0.15)'; }
+  else if (HI < 39) { level='注意'; lvlBg='rgba(139,195,74,0.2)'; }
+  else if (HI < 46) { level='谨慎'; lvlBg='rgba(254,212,95,0.25)'; }
+  else if (HI < 51) { level='危险'; lvlBg='rgba(247,123,50,0.25)'; }
+  else if (HI < 56) { level='极危'; lvlBg='rgba(235,74,35,0.3)'; }
+  else { level='致命'; lvlBg='rgba(147,21,25,0.4)'; }
+
+  const icons = {'舒适':'✅','注意':'ℹ','谨慎':'⚡','危险':'☀','极危':'🔥','致命':'💀'};
+  levelEl.textContent = `${icons[level]} ${level}`;
+  levelEl.style.background = lvlBg;
+  levelEl.style.color = bright;
+
+  // Danger pulse
+  ring.classList.toggle('pulse-danger', HI >= 51);
+
+  // Risk pointer
+  const riskPct = Math.min(100, Math.max(0, ((HI - 27) / (TEMP_MAX - 27)) * 100));
+  document.getElementById('riskPointer').style.left = riskPct + '%';
+
+  // Highlight matrix cell
+  highlightMatrixCell(T, H);
+}
+
+function highlightMatrixCell(t, h) {
+  const td = document.querySelector(`td[data-t="${t}"][data-h="${h}"]`);
+  if (td && td !== selectedCell) {
+    td.style.outline = '2px solid rgba(61,31,26,0.35)';
+    td.style.outlineOffset = '1px';
+  }
+  // Reset previous highlights
+  document.querySelectorAll('td[data-hi]').forEach(d => {
+    if (d !== selectedCell && !(d.dataset.t == t && d.dataset.h == h)) {
+      d.style.outline = '';
+      d.style.outlineOffset = '';
+    }
+  });
+}
+
+tempSlider.addEventListener('input', updateCalc);
+humidSlider.addEventListener('input', updateCalc);
+
+// Initial calculation
+updateCalc();
+
+// ========== Particles ==========
+(function createParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.animationDuration = (6 + Math.random() * 10) + 's';
+    p.style.animationDelay = (Math.random() * 10) + 's';
+    p.style.background = COLORS[Math.floor(Math.random() * COLORS.length)];
+    p.style.width = (3 + Math.random() * 4) + 'px';
+    p.style.height = p.style.width;
+    container.appendChild(p);
+  }
+})();
+
+// ========== Scroll Reveal ==========
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) e.target.style.animationPlayState = 'running';
+  });
+}, { threshold: 0.1 });
+document.querySelectorAll('.section-label,.matrix-wrap,.calc-card,.insight-card').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>

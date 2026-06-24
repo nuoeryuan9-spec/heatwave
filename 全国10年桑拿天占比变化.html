@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全国历年桑拿天占比变化 (2015-2025)</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  }
+  .chart-container {
+    position: relative;
+    width: 900px;
+    height: 900px;
+  }
+  #main-chart {
+    width: 100%;
+    height: 100%;
+  }
+</style>
+</head>
+<body>
+<div class="chart-container">
+  <div id="main-chart"></div>
+</div>
+
+<script>
+(function() {
+  var dom = document.getElementById('main-chart');
+  var chart = echarts.init(dom, null, { renderer: 'svg' });
+
+  // 全国每年桑拿天占比均值
+  var years = ['2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
+  var values = [24.72, 29.34, 28.22, 30.00, 28.11, 28.69, 31.88, 31.51, 33.68, 37.38, 34.95];
+  
+  // 暖橙色渐变：从浅到深 (2015→2025)
+  var colorStops = [
+    '#FCCC88', '#FCC580', '#FDBE83', '#FDAF70', '#FDA05D',
+    '#FD914A', '#FD9C3B', '#F87820', '#F06010', '#EA580E', '#D9480C'
+  ];
+
+  // 构建数据
+  var data = [];
+  for (var i = 0; i < years.length; i++) {
+    data.push({
+      value: values[i],
+      name: years[i],
+      itemStyle: { color: colorStops[i] }
+    });
+  }
+  // 反向以便从顶部顺时针排列
+  data.reverse();
+  var reversedYears = years.slice().reverse();
+  var reversedColors = colorStops.slice().reverse();
+
+  var maxValue = Math.ceil(Math.max.apply(null, values) / 5) * 5 + 5; // 向上取整到5的倍数
+
+  var option = {
+    backgroundColor: 'transparent',
+    graphic: [
+      // 中心太阳图标 - 多层光晕
+      {
+        type: 'group',
+        left: 'center',
+        top: 'center',
+        children: [
+          // 最外层光圈
+          {
+            type: 'circle',
+            shape: { cx: 0, cy: 0, r: 80 },
+            style: { fill: 'rgba(253, 156, 59, 0.08)', stroke: 'rgba(253, 156, 59, 0.15)', lineWidth: 2 }
+          },
+          // 第二层光圈
+          {
+            type: 'circle',
+            shape: { cx: 0, cy: 0, r: 65 },
+            style: { fill: 'rgba(253, 156, 59, 0.12)', stroke: 'rgba(253, 156, 59, 0.25)', lineWidth: 1.5 }
+          },
+          // 太阳本体
+          {
+            type: 'circle',
+            shape: { cx: 0, cy: 0, r: 46 },
+            style: { fill: 'rgba(253, 156, 59, 0.3)', stroke: '#FD9C3B', lineWidth: 2 }
+          },
+          // 太阳光芒 - 8条射线
+          { type: 'rect', shape: { x: -3, y: -72, width: 6, height: 18 }, style: { fill: '#FD9C3B', borderRadius: 3 } },
+          { type: 'rect', shape: { x: -3, y: 54, width: 6, height: 18 }, style: { fill: '#FD9C3B', borderRadius: 3 } },
+          { type: 'rect', shape: { x: -72, y: -3, width: 18, height: 6 }, style: { fill: '#FD9C3B', borderRadius: 3 } },
+          { type: 'rect', shape: { x: 54, y: -3, width: 18, height: 6 }, style: { fill: '#FD9C3B', borderRadius: 3 } },
+          { type: 'rect', shape: { x: -38, y: -58, width: 6, height: 14 }, rotation: 0.785, origin: [0, 0], style: { fill: '#FDBE83', borderRadius: 3 } },
+          { type: 'rect', shape: { x: -38, y: 44, width: 6, height: 14 }, rotation: 0.785, origin: [0, 0], style: { fill: '#FDBE83', borderRadius: 3 } },
+          { type: 'rect', shape: { x: 32, y: -58, width: 6, height: 14 }, rotation: -0.785, origin: [0, 0], style: { fill: '#FDBE83', borderRadius: 3 } },
+          { type: 'rect', shape: { x: 32, y: 44, width: 6, height: 14 }, rotation: -0.785, origin: [0, 0], style: { fill: '#FDBE83', borderRadius: 3 } },
+          // 中心文字
+          {
+            type: 'text',
+            style: {
+              text: '桑拿天',
+              x: 0, y: -10,
+              textAlign: 'center', textVerticalAlign: 'middle',
+              fill: '#333', fontSize: 16, fontWeight: 'bold',
+              fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif'
+            }
+          },
+          {
+            type: 'text',
+            style: {
+              text: '全国占比',
+              x: 0, y: 12,
+              textAlign: 'center', textVerticalAlign: 'middle',
+              fill: '#D9480C', fontSize: 13,
+              fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif'
+            }
+          }
+        ]
+      }
+    ],
+    polar: {
+      center: ['50%', '50%'],
+      radius: ['28%', '88%']
+    },
+    radiusAxis: {
+      type: 'value',
+      min: 0,
+      max: maxValue,
+      show: true,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        show: true,
+        color: '#999',
+        fontSize: 10,
+        formatter: function(v) { return v + '%'; },
+        distance: 8
+      },
+      splitLine: {
+        show: true,
+        lineStyle: { color: 'rgba(0,0,0,0.06)', type: 'dashed' }
+      },
+      name: {
+        show: false
+      }
+    },
+    angleAxis: {
+      type: 'category',
+      data: reversedYears,
+      show: true,
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: {
+        color: '#333',
+        fontSize: 13,
+        fontWeight: 'bold',
+        fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif',
+        margin: 14
+      },
+      splitLine: {
+        show: true,
+        lineStyle: { color: 'rgba(0,0,0,0.06)', type: 'solid' }
+      }
+    },
+    series: [
+      {
+        type: 'bar',
+        data: data,
+        coordinateSystem: 'polar',
+        barWidth: 18,
+        roundCap: true,
+        showBackground: true,
+        backgroundStyle: {
+          color: 'rgba(0,0,0,0.03)',
+          borderRadius: 10
+        },
+        itemStyle: {
+          borderRadius: 10,
+          shadowBlur: 12,
+          shadowColor: 'rgba(253,156,59,0.4)',
+          shadowOffsetX: 0,
+          shadowOffsetY: 0
+        },
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 20,
+            shadowColor: 'rgba(253,156,59,0.7)'
+          }
+        },
+        label: {
+          show: true,
+          position: 'outside',
+          formatter: function(p) {
+            return p.value.toFixed(1) + '%';
+          },
+          color: '#444',
+          fontSize: 11,
+          fontWeight: 'bold',
+          fontFamily: 'PingFang SC, Microsoft YaHei, sans-serif',
+          distance: 12
+        }
+      }
+    ]
+  };
+
+  chart.setOption(option);
+
+  // 响应式
+  window.addEventListener('resize', function() {
+    chart.resize();
+  });
+})();
+</script>
+</body>
+</html>

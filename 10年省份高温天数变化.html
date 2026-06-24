@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高温烤验：各省高温天数变化（2015 vs 2025）</title>
+<style>
+:root {
+  --warm-start: #E74C3C;
+  --warm-mid:   #F08050;
+  --warm-end:   #F5A060;
+  --cool-start: #2471A3;
+  --cool-mid:   #3498DB;
+  --cool-end:   #85C1E9;
+  --gray:       #ABB2B9;
+  --text:       #2C3E50;
+  --text-dim:   #7F8C8D;
+  --bg-card:    rgba(255,255,255,0.94);
+  --bg-overlay: rgba(0,0,0,0.55);
+  --shadow:     0 2px 12px rgba(0,0,0,0.07);
+  --shadow-lg:  0 12px 40px rgba(0,0,0,0.15);
+}
+
+*,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: transparent;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.container { max-width:1100px; margin:0 auto; padding:28px 20px 40px; }
+
+/* ── Header ── */
+.header {
+  text-align:center; padding:24px 24px 20px; margin-bottom:20px;
+  background:var(--bg-card); border-radius:16px; box-shadow:var(--shadow);
+}
+.header .icon-row { font-size:44px; margin-bottom:6px; letter-spacing:4px; }
+.header h1 { font-size:26px; font-weight:800; margin-bottom:6px; }
+.header .sub { font-size:13px; color:var(--text-dim); line-height:1.7; }
+.header .sub b { color:var(--warm-start); }
+.header .sub b.blue { color:var(--cool-start); }
+
+/* ── Summary ── */
+.summary {
+  display:flex; gap:12px; margin-bottom:20px;
+}
+.sum-card {
+  flex:1; text-align:center; padding:16px 12px;
+  background:var(--bg-card); border-radius:12px; box-shadow:var(--shadow);
+}
+.sum-card .val { font-size:34px; font-weight:800; line-height:1; }
+.sum-card .val.warm { color:var(--warm-start); }
+.sum-card .val.cool { color:var(--cool-start); }
+.sum-card .lbl { font-size:12px; color:var(--text-dim); margin-top:5px; }
+
+/* ── Legend ── */
+.legend {
+  display:flex; gap:24px; align-items:center; padding:10px 18px; margin-bottom:16px;
+  background:var(--bg-card); border-radius:10px; box-shadow:var(--shadow);
+  font-size:12px; color:var(--text-dim);
+}
+.legend .dot { display:inline-block; width:14px; height:14px; border-radius:4px; margin-right:6px; vertical-align:middle; }
+.legend .dot.warm { background:linear-gradient(180deg,var(--warm-start),var(--warm-end)); }
+.legend .dot.cool { background:linear-gradient(180deg,var(--cool-end),var(--cool-start)); }
+
+/* ── Chart Panel ── */
+.chart-panel {
+  background:var(--bg-card); border-radius:16px; box-shadow:var(--shadow-lg);
+  padding:20px 20px 12px; position:relative;
+}
+.chart-panel h2 { font-size:16px; font-weight:700; margin-bottom:8px; text-align:center; }
+#barCanvas { display:block; width:100%; cursor:pointer; }
+
+/* ── Overlay ── */
+.overlay {
+  display:none; position:fixed; inset:0; z-index:999;
+  background:var(--bg-overlay);
+  justify-content:center; align-items:center;
+}
+.overlay.show { display:flex; }
+
+.detail-card {
+  position:relative; width:min(680px,92vw);
+  background:#fff; border-radius:18px; box-shadow:var(--shadow-lg);
+  padding:24px 24px 18px; max-height:90vh; overflow-y:auto;
+  animation: popIn 0.25s ease;
+}
+@keyframes popIn {
+  from { opacity:0; transform:scale(0.92) translateY(12px); }
+  to   { opacity:1; transform:scale(1) translateY(0); }
+}
+
+.detail-close {
+  position:absolute; top:14px; right:18px; width:34px; height:34px;
+  border:none; background:#f0f0f0; border-radius:50%; cursor:pointer;
+  font-size:18px; color:#666; display:flex; align-items:center; justify-content:center;
+  transition:background 0.15s;
+}
+.detail-close:hover { background:#e0e0e0; }
+
+.detail-header {
+  display:flex; align-items:center; gap:12px; margin-bottom:20px;
+}
+.detail-prov { font-size:22px; font-weight:800; }
+.detail-badge {
+  display:inline-block; padding:3px 12px; border-radius:20px;
+  font-size:12px; font-weight:600; color:#fff;
+}
+.detail-badge.warm { background:var(--warm-start); }
+.detail-badge.cool { background:var(--cool-start); }
+
+.detail-metrics {
+  display:flex; gap:16px; margin-bottom:18px;
+}
+.metric {
+  flex:1; text-align:center; padding:12px 8px;
+  background:#f8f9fa; border-radius:10px;
+}
+.metric .m-val { font-size:24px; font-weight:800; }
+.metric .m-lbl { font-size:11px; color:var(--text-dim); margin-top:2px; }
+
+#lineCanvas { display:block; width:100%; }
+
+.detail-note { text-align:center; margin-top:8px; font-size:11px; color:var(--text-dim); }
+
+/* ── Tooltip on bar chart ── */
+.chart-tip {
+  position:fixed; pointer-events:none; z-index:800;
+  background:rgba(44,62,80,0.94); color:#fff; border-radius:8px;
+  padding:8px 12px; font-size:12px; line-height:1.6;
+  opacity:0; transform:translateY(4px);
+  transition:opacity 0.15s,transform 0.15s;
+}
+.chart-tip.show { opacity:1; transform:translateY(0); }
+.chart-tip .tp-name { font-weight:700; font-size:13px; }
+.chart-tip .tp-change { margin-top:2px; }
+
+/* ── Responsive ── */
+@media (max-width:768px) {
+  .container { padding:12px 8px 24px; }
+  .header h1 { font-size:20px; }
+  .summary { flex-wrap:wrap; }
+  .sum-card { min-width:80px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="icon-row">🔥🌡️🔥</div>
+    <h1>高温烤验：2015 → 2025 各省高温天数变化</h1>
+    <div class="sub">
+      日最高气温 ≥ 35°C · 全国 33 省份 · <b>26 省增加</b> · <b class="blue">6 省减少</b> · 1 省持平
+      <br>数据来源：ERA5 再分析数据 &nbsp;|&nbsp; 点击柱状图查看 11 年趋势
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="sum-card"><div class="val warm" id="sumInc">--</div><div class="lbl">📈 增加省份</div></div>
+    <div class="sum-card"><div class="val cool" id="sumDec">--</div><div class="lbl">📉 减少省份</div></div>
+    <div class="sum-card"><div class="val" id="sumMax" style="color:#E67E22;">--</div><div class="lbl">🔝 最大增幅</div></div>
+    <div class="sum-card"><div class="val" id="sumMin" style="color:#2980B9;">--</div><div class="lbl">📊 最大降幅</div></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot warm"></span>天数增加（暖色向上）</span>
+    <span><span class="dot cool"></span>天数减少（冷色向下）</span>
+    <span style="margin-left:auto;font-size:11px;">🖱️ 悬停查看详情 · 点击查看 11 年趋势线</span>
+  </div>
+
+  <div class="chart-panel">
+    <h2>各省高温天数变化量（2025年 − 2015年）</h2>
+    <canvas id="barCanvas"></canvas>
+  </div>
+</div>
+
+<!-- Chart Tooltip -->
+<div class="chart-tip" id="chartTip"></div>
+
+<!-- Detail Overlay -->
+<div class="overlay" id="overlay">
+  <div class="detail-card">
+    <button class="detail-close" id="detailClose">&times;</button>
+    <div class="detail-header">
+      <span class="detail-prov" id="detailProv">--</span>
+      <span class="detail-badge" id="detailBadge">--</span>
+    </div>
+    <div class="detail-metrics">
+      <div class="metric"><div class="m-val" style="color:#F39C12;" id="mD15">--</div><div class="m-lbl">2015 年高温天数</div></div>
+      <div class="metric"><div class="m-val" id="mD25">--</div><div class="m-lbl">2025 年高温天数</div></div>
+      <div class="metric"><div class="m-val" id="mPct">--</div><div class="m-lbl">增长比例</div></div>
+    </div>
+    <canvas id="lineCanvas"></canvas>
+    <div class="detail-note">📌 2015 年 起点 · 📍 2025 年 终点 · 点击其他省份或关闭按钮继续探索</div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════
+//  Embedded province data (11 years)
+//  Sorted by change descending
+// ════════════════════════════════════
+const PROV_DATA = [
+  {"name":"浙江省","short":"浙江","years":{"2015":24,"2016":52,"2017":76,"2018":74,"2019":58,"2020":65,"2021":65,"2022":79,"2023":70,"2024":81,"2025":98},"d15":24,"d25":98,"change":74,"pct":308.3,"trend":"inc","absChange":74},
+  {"name":"湖南省","short":"湖南","years":{"2015":27,"2016":61,"2017":62,"2018":71,"2019":65,"2020":63,"2021":100,"2022":79,"2023":75,"2024":75,"2025":97},"d15":27,"d25":97,"change":70,"pct":259.3,"trend":"inc","absChange":70},
+  {"name":"安徽省","short":"安徽","years":{"2015":17,"2016":34,"2017":39,"2018":48,"2019":54,"2020":46,"2021":44,"2022":79,"2023":44,"2024":75,"2025":86},"d15":17,"d25":86,"change":69,"pct":405.9,"trend":"inc","absChange":69},
+  {"name":"江西省","short":"江西","years":{"2015":40,"2016":64,"2017":80,"2018":89,"2019":72,"2020":79,"2021":105,"2022":86,"2023":70,"2024":85,"2025":109},"d15":40,"d25":109,"change":69,"pct":172.5,"trend":"inc","absChange":69},
+  {"name":"福建省","short":"福建","years":{"2015":40,"2016":54,"2017":74,"2018":71,"2019":74,"2020":85,"2021":92,"2022":83,"2023":48,"2024":71,"2025":104},"d15":40,"d25":104,"change":64,"pct":160,"trend":"inc","absChange":64},
+  {"name":"河南省","short":"河南","years":{"2015":28,"2016":45,"2017":64,"2018":63,"2019":76,"2020":47,"2021":45,"2022":75,"2023":66,"2024":70,"2025":87},"d15":28,"d25":87,"change":59,"pct":210.7,"trend":"inc","absChange":59},
+  {"name":"重庆市","short":"重庆","years":{"2015":17,"2016":42,"2017":41,"2018":58,"2019":32,"2020":34,"2021":28,"2022":60,"2023":41,"2024":71,"2025":76},"d15":17,"d25":76,"change":59,"pct":347.1,"trend":"inc","absChange":59},
+  {"name":"湖北省","short":"湖北","years":{"2015":17,"2016":45,"2017":41,"2018":58,"2019":66,"2020":29,"2021":34,"2022":83,"2023":50,"2024":76,"2025":74},"d15":17,"d25":74,"change":57,"pct":335.3,"trend":"inc","absChange":57},
+  {"name":"山东省","short":"山东","years":{"2015":18,"2016":21,"2017":39,"2018":53,"2019":52,"2020":28,"2021":35,"2022":44,"2023":51,"2024":39,"2025":68},"d15":18,"d25":68,"change":50,"pct":277.8,"trend":"inc","absChange":50},
+  {"name":"江苏省","short":"江苏","years":{"2015":16,"2016":32,"2017":44,"2018":36,"2019":29,"2020":30,"2021":29,"2022":66,"2023":31,"2024":61,"2025":64},"d15":16,"d25":64,"change":48,"pct":300,"trend":"inc","absChange":48},
+  {"name":"山西省","short":"山西","years":{"2015":16,"2016":28,"2017":46,"2018":50,"2019":45,"2020":17,"2021":33,"2022":36,"2023":25,"2024":49,"2025":53},"d15":16,"d25":53,"change":37,"pct":231.2,"trend":"inc","absChange":37},
+  {"name":"四川省","short":"四川","years":{"2015":37,"2016":52,"2017":54,"2018":56,"2019":49,"2020":50,"2021":42,"2022":58,"2023":77,"2024":87,"2025":70},"d15":37,"d25":70,"change":33,"pct":89.2,"trend":"inc","absChange":33},
+  {"name":"上海市","short":"上海","years":{"2015":10,"2016":15,"2017":32,"2018":16,"2019":11,"2020":17,"2021":9,"2022":39,"2023":11,"2024":46,"2025":39},"d15":10,"d25":39,"change":29,"pct":290,"trend":"inc","absChange":29},
+  {"name":"陕西省","short":"陕西","years":{"2015":39,"2016":67,"2017":63,"2018":70,"2019":50,"2020":25,"2021":51,"2022":73,"2023":54,"2024":72,"2025":67},"d15":39,"d25":67,"change":28,"pct":71.8,"trend":"inc","absChange":28},
+  {"name":"新疆维吾尔自治区","short":"新疆","years":{"2015":101,"2016":118,"2017":113,"2018":103,"2019":119,"2020":110,"2021":119,"2022":123,"2023":111,"2024":124,"2025":125},"d15":101,"d25":125,"change":24,"pct":23.8,"trend":"inc","absChange":24},
+  {"name":"内蒙古自治区","short":"内蒙古","years":{"2015":46,"2016":54,"2017":58,"2018":68,"2019":53,"2020":58,"2021":49,"2022":65,"2023":76,"2024":61,"2025":68},"d15":46,"d25":68,"change":22,"pct":47.8,"trend":"inc","absChange":22},
+  {"name":"河北省","short":"河北","years":{"2015":38,"2016":29,"2017":49,"2018":49,"2019":55,"2020":38,"2021":31,"2022":36,"2023":54,"2024":55,"2025":59},"d15":38,"d25":59,"change":21,"pct":55.3,"trend":"inc","absChange":21},
+  {"name":"贵州省","short":"贵州","years":{"2015":31,"2016":32,"2017":36,"2018":40,"2019":46,"2020":34,"2021":53,"2022":60,"2023":65,"2024":60,"2025":50},"d15":31,"d25":50,"change":19,"pct":61.3,"trend":"inc","absChange":19},
+  {"name":"甘肃省","short":"甘肃","years":{"2015":59,"2016":64,"2017":74,"2018":71,"2019":65,"2020":62,"2021":70,"2022":85,"2023":82,"2024":88,"2025":77},"d15":59,"d25":77,"change":18,"pct":30.5,"trend":"inc","absChange":18},
+  {"name":"天津市","short":"天津","years":{"2015":15,"2016":13,"2017":33,"2018":27,"2019":31,"2020":23,"2021":7,"2022":24,"2023":31,"2024":29,"2025":24},"d15":15,"d25":24,"change":9,"pct":60,"trend":"inc","absChange":9},
+  {"name":"黑龙江省","short":"黑龙江","years":{"2015":3,"2016":14,"2017":15,"2018":8,"2019":2,"2020":7,"2021":5,"2022":0,"2023":3,"2024":0,"2025":12},"d15":3,"d25":12,"change":9,"pct":300,"trend":"inc","absChange":9},
+  {"name":"广西壮族自治区","short":"广西","years":{"2015":71,"2016":72,"2017":53,"2018":64,"2019":82,"2020":84,"2021":108,"2022":74,"2023":90,"2024":57,"2025":80},"d15":71,"d25":80,"change":9,"pct":12.7,"trend":"inc","absChange":9},
+  {"name":"吉林省","short":"吉林","years":{"2015":2,"2016":16,"2017":14,"2018":15,"2019":4,"2020":9,"2021":2,"2022":0,"2023":5,"2024":1,"2025":9},"d15":2,"d25":9,"change":7,"pct":350,"trend":"inc","absChange":7},
+  {"name":"宁夏回族自治区","short":"宁夏","years":{"2015":8,"2016":12,"2017":12,"2018":12,"2019":6,"2020":8,"2021":20,"2022":26,"2023":19,"2024":16,"2025":15},"d15":8,"d25":15,"change":7,"pct":87.5,"trend":"inc","absChange":7},
+  {"name":"北京市","short":"北京","years":{"2015":19,"2016":15,"2017":30,"2018":29,"2019":34,"2020":24,"2021":7,"2022":23,"2023":38,"2024":28,"2025":25},"d15":19,"d25":25,"change":6,"pct":31.6,"trend":"inc","absChange":6},
+  {"name":"西藏自治区","short":"西藏","years":{"2015":2,"2016":1,"2017":1,"2018":3,"2019":4,"2020":3,"2021":0,"2022":2,"2023":4,"2024":11,"2025":5},"d15":2,"d25":5,"change":3,"pct":150,"trend":"inc","absChange":3},
+  {"name":"台湾省","short":"台湾","years":{"2015":0,"2016":3,"2017":1,"2018":0,"2019":2,"2020":6,"2021":4,"2022":2,"2023":4,"2024":10,"2025":0},"d15":0,"d25":0,"change":0,"pct":0,"trend":"same","absChange":0},
+  {"name":"青海省","short":"青海","years":{"2015":1,"2016":4,"2017":1,"2018":0,"2019":0,"2020":0,"2021":0,"2022":3,"2023":1,"2024":1,"2025":0},"d15":1,"d25":0,"change":-1,"pct":100,"trend":"dec","absChange":1},
+  {"name":"香港特别行政区","short":"香港","years":{"2015":2,"2016":1,"2017":3,"2018":0,"2019":3,"2020":0,"2021":0,"2022":5,"2023":2,"2024":1,"2025":0},"d15":2,"d25":0,"change":-2,"pct":100,"trend":"dec","absChange":2},
+  {"name":"辽宁省","short":"辽宁","years":{"2015":14,"2016":7,"2017":20,"2018":23,"2019":14,"2020":14,"2021":2,"2022":1,"2023":20,"2024":5,"2025":8},"d15":14,"d25":8,"change":-6,"pct":42.9,"trend":"dec","absChange":6},
+  {"name":"云南省","short":"云南","years":{"2015":59,"2016":54,"2017":36,"2018":25,"2019":70,"2020":85,"2021":53,"2022":48,"2023":82,"2024":67,"2025":40},"d15":59,"d25":40,"change":-19,"pct":32.2,"trend":"dec","absChange":19},
+  {"name":"广东省","short":"广东","years":{"2015":92,"2016":59,"2017":61,"2018":73,"2019":71,"2020":95,"2021":130,"2022":76,"2023":63,"2024":72,"2025":73},"d15":92,"d25":73,"change":-19,"pct":20.7,"trend":"dec","absChange":19},
+  {"name":"海南省","short":"海南","years":{"2015":79,"2016":43,"2017":24,"2018":19,"2019":57,"2020":74,"2021":62,"2022":18,"2023":54,"2024":56,"2025":30},"d15":79,"d25":30,"change":-49,"pct":62,"trend":"dec","absChange":49}
+];
+
+// ── Summary ──
+const incCount = PROV_DATA.filter(d => d.trend === 'inc').length;
+const decCount = PROV_DATA.filter(d => d.trend === 'dec').length;
+const maxInc = PROV_DATA[0]; // sorted by change desc
+const maxDec = PROV_DATA[PROV_DATA.length-1]; // most negative
+
+document.getElementById('sumInc').textContent = incCount;
+document.getElementById('sumDec').textContent = decCount;
+document.getElementById('sumMax').textContent = maxInc.short;
+document.getElementById('sumMin').textContent = maxDec.short;
+
+// ══════════════════════════════════
+//  BAR CHART
+// ══════════════════════════════════
+const barCanvas = document.getElementById('barCanvas');
+const barCtx = barCanvas.getContext('2d');
+const chartTip = document.getElementById('chartTip');
+
+const N = PROV_DATA.length;
+const maxAbsChange = Math.max(...PROV_DATA.map(d => d.absChange));
+const yAxisMax = Math.ceil(maxAbsChange / 10) * 10 + 10;
+const yearLabels = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025'];
+
+// We'll store bar hit regions for click detection
+let barRects = []; // [{x,y,w,h,idx}]
+
+function drawBarChart() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = barCanvas.parentElement.getBoundingClientRect();
+  const W = rect.width - 44; // padding
+  const H = 520;
+
+  barCanvas.width = W * dpr;
+  barCanvas.height = H * dpr;
+  barCanvas.style.width = W + 'px';
+  barCanvas.style.height = H + 'px';
+  barCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const pad = { top: 30, bottom: 70, left: 60, right: 30 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+  const zeroY = pad.top + plotH / 2;
+
+  barCtx.clearRect(0, 0, W, H);
+
+  // Y axis
+  barCtx.strokeStyle = '#ddd';
+  barCtx.lineWidth = 1;
+  barCtx.setLineDash([4, 4]);
+  for (let v = -yAxisMax; v <= yAxisMax; v += 20) {
+    const y = zeroY - (v / yAxisMax) * (plotH / 2);
+    barCtx.beginPath();
+    barCtx.moveTo(pad.left, y);
+    barCtx.lineTo(W - pad.right, y);
+    barCtx.stroke();
+
+    barCtx.fillStyle = '#95A5A6';
+    barCtx.font = '11px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    barCtx.textAlign = 'right';
+    barCtx.fillText((v > 0 ? '+' : '') + v, pad.left - 8, y + 4);
+  }
+  barCtx.setLineDash([]);
+
+  // Zero line
+  barCtx.strokeStyle = '#555';
+  barCtx.lineWidth = 2;
+  barCtx.beginPath();
+  barCtx.moveTo(pad.left, zeroY);
+  barCtx.lineTo(W - pad.right, zeroY);
+  barCtx.stroke();
+
+  // Highlight negative region with subtle background
+  barCtx.fillStyle = 'rgba(41,128,185,0.04)';
+  barCtx.fillRect(pad.left, zeroY, plotW, plotH / 2);
+
+  // Bars
+  const barGapRatio = 0.28;
+  const barW = plotW / N * (1 - barGapRatio);
+  const gapW = plotW / N * barGapRatio;
+  barRects = [];
+
+  PROV_DATA.forEach((d, i) => {
+    const x = pad.left + (plotW / N) * i + gapW / 2;
+    // Minimum bar height for visibility
+    let barH = (d.absChange / yAxisMax) * (plotH / 2);
+    if (barH < 3 && d.absChange > 0) barH = 3;
+
+    let y, color1, color2, gradY0, gradY1;
+
+    if (d.change >= 0) {
+      y = zeroY - barH;
+      color1 = '#E74C3C';
+      color2 = '#F5A060';
+      gradY0 = zeroY;
+      gradY1 = y;
+    } else {
+      y = zeroY;
+      color1 = '#2471A3';
+      color2 = '#85C1E9';
+      gradY0 = zeroY;
+      gradY1 = zeroY + barH;
+    }
+
+    // Gradient — always from zero-line outward (dark→light)
+    const grad = barCtx.createLinearGradient(x, gradY0, x, gradY1);
+    grad.addColorStop(0, color1);
+    grad.addColorStop(1, color2);
+    barCtx.fillStyle = grad;
+
+    // Rounded top for positive, rounded bottom for negative
+    const r = Math.min(6, barW / 2);
+    if (barH > 0) {
+      roundRect(barCtx, x, y, barW, barH, d.change >= 0 ? [r, r, 0, 0] : [0, 0, r, r]);
+      barCtx.fill();
+      // Subtle border for definition
+      barCtx.strokeStyle = d.change >= 0 ? 'rgba(200,60,45,0.5)' : 'rgba(30,90,140,0.5)';
+      barCtx.lineWidth = 0.5;
+      barCtx.stroke();
+    }
+
+    barRects.push({ x, y, w: barW, h: barH, idx: i, prov: d });
+  });
+
+  // X labels
+  barCtx.fillStyle = '#2C3E50';
+  barCtx.font = '11px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  barCtx.textAlign = 'center';
+  PROV_DATA.forEach((d, i) => {
+    const x = pad.left + (plotW / N) * (i + 0.5);
+    barCtx.save();
+    barCtx.translate(x, zeroY + 18);
+    barCtx.rotate(-Math.PI / 4);
+    barCtx.fillText(d.short, 0, 0);
+    barCtx.restore();
+  });
+
+  // Y axis title
+  barCtx.fillStyle = '#7F8C8D';
+  barCtx.font = '11px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  barCtx.textAlign = 'center';
+  barCtx.fillText('↑ 高温天数增加', W / 2, pad.top - 12);
+  barCtx.fillText('↓ 高温天数减少', W / 2, H - pad.bottom + 50);
+}
+
+function roundRect(ctx, x, y, w, h, radii) {
+  const [tl, tr, br, bl] = radii;
+  ctx.beginPath();
+  ctx.moveTo(x + tl, y);
+  ctx.lineTo(x + w - tr, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + tr);
+  ctx.lineTo(x + w, y + h - br);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+  ctx.lineTo(x + bl, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - bl);
+  ctx.lineTo(x, y + tl);
+  ctx.quadraticCurveTo(x, y, x + tl, y);
+  ctx.closePath();
+}
+
+// ── Mouse events on bar chart ──
+function getBarAt(clientX, clientY) {
+  const rect = barCanvas.getBoundingClientRect();
+  // barRects are stored in CSS-pixel coordinates (setTransform applies 1:1 CSS mapping)
+  // So we use CSS pixels for hit testing directly — no dpr scaling needed
+  const mx = clientX - rect.left;
+  const my = clientY - rect.top;
+
+  for (const br of barRects) {
+    // For negative bars, y=zeroY (top of bar), bar extends downward to y+h
+    const barTop = br.y;
+    const barBottom = br.y + br.h;
+    if (mx >= br.x && mx <= br.x + br.w && my >= barTop && my <= barBottom) {
+      return br;
+    }
+  }
+  return null;
+}
+
+barCanvas.addEventListener('mousemove', function(e) {
+  const br = getBarAt(e.clientX, e.clientY);
+  if (br) {
+    barCanvas.style.cursor = 'pointer';
+    const d = br.prov;
+    const changeStr = d.trend === 'inc' ? '+' + d.change : (d.trend === 'dec' ? '' + d.change : '0');
+    const pctStr = d.pct === null ? '新增' : (d.trend === 'inc' ? '+' + d.pct + '%' : '-' + d.pct + '%');
+    chartTip.innerHTML =
+      '<div class="tp-name">' + d.name + '</div>' +
+      '<div class="tp-change">变化：<b>' + changeStr + ' 天</b>（' + pctStr + '）</div>';
+    chartTip.style.left = (e.clientX + 14) + 'px';
+    chartTip.style.top = (e.clientY - 40) + 'px';
+    chartTip.classList.add('show');
+  } else {
+    barCanvas.style.cursor = 'default';
+    chartTip.classList.remove('show');
+  }
+});
+
+barCanvas.addEventListener('mouseleave', function() {
+  chartTip.classList.remove('show');
+});
+
+barCanvas.addEventListener('click', function(e) {
+  const br = getBarAt(e.clientX, e.clientY);
+  if (br) showDetail(br.prov);
+});
+
+// ══════════════════════════════════
+//  LINE CHART (Detail Overlay)
+// ══════════════════════════════════
+const overlay = document.getElementById('overlay');
+const lineCanvas = document.getElementById('lineCanvas');
+const lineCtx = lineCanvas.getContext('2d');
+let activeProv = null;
+
+function showDetail(prov) {
+  activeProv = prov;
+
+  document.getElementById('detailProv').textContent = prov.name;
+  const badge = document.getElementById('detailBadge');
+  badge.textContent = prov.trend === 'inc' ? '高温增加' : (prov.trend === 'dec' ? '高温减少' : '基本持平');
+  badge.className = 'detail-badge ' + (prov.trend === 'inc' ? 'warm' : 'cool');
+
+  document.getElementById('mD15').textContent = prov.d15 + ' 天';
+  document.getElementById('mD25').textContent = prov.d25 + ' 天';
+  document.getElementById('mD25').style.color = prov.trend === 'inc' ? '#E74C3C' : (prov.trend === 'dec' ? '#2980B9' : '#7F8C8D');
+  const pctDisplay = prov.pct === null ? '新增' : (prov.trend === 'inc' ? '+' + prov.pct + '%' : '-' + prov.pct + '%');
+  document.getElementById('mPct').textContent = pctDisplay;
+  document.getElementById('mPct').style.color = prov.trend === 'inc' ? '#E74C3C' : (prov.trend === 'dec' ? '#2980B9' : '#7F8C8D');
+
+  overlay.classList.add('show');
+  drawLineChart(prov);
+}
+
+document.getElementById('detailClose').addEventListener('click', function() {
+  overlay.classList.remove('show');
+  activeProv = null;
+});
+overlay.addEventListener('click', function(e) {
+  if (e.target === overlay) overlay.classList.remove('show');
+});
+
+function drawLineChart(prov) {
+  const dpr = window.devicePixelRatio || 1;
+  const card = document.querySelector('.detail-card');
+  const maxW = Math.min(card.clientWidth - 48, 632);
+  const W = maxW, H = 300;
+
+  lineCanvas.width = W * dpr;
+  lineCanvas.height = H * dpr;
+  lineCanvas.style.width = W + 'px';
+  lineCanvas.style.height = H + 'px';
+  lineCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const pad = { top: 30, bottom: 40, left: 52, right: 28 };
+  const plotW = W - pad.left - pad.right;
+  const plotH = H - pad.top - pad.bottom;
+
+  lineCtx.clearRect(0, 0, W, H);
+
+  const values = yearLabels.map(y => prov.years[y]);
+  const yMax = Math.max(...values) + 10;
+  const incColor = '#E74C3C';
+  const decColor = '#2980B9';
+  const lineColor = prov.trend === 'inc' ? incColor : (prov.trend === 'dec' ? decColor : '#95A5A6');
+
+  // Grid lines
+  lineCtx.strokeStyle = '#EAECEE';
+  lineCtx.lineWidth = 1;
+  lineCtx.setLineDash([3, 5]);
+  for (let v = 0; v <= yMax; v += Math.ceil(yMax / 8)) {
+    const y = pad.top + plotH - (v / yMax) * plotH;
+    lineCtx.beginPath();
+    lineCtx.moveTo(pad.left, y);
+    lineCtx.lineTo(W - pad.right, y);
+    lineCtx.stroke();
+
+    lineCtx.fillStyle = '#95A5A6';
+    lineCtx.font = '10px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    lineCtx.textAlign = 'right';
+    lineCtx.fillText(v + ' 天', pad.left - 8, y + 4);
+  }
+  lineCtx.setLineDash([]);
+
+  // Y-axis title
+  lineCtx.fillStyle = '#7F8C8D';
+  lineCtx.font = '10px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  lineCtx.textAlign = 'center';
+  lineCtx.save();
+  lineCtx.translate(14, pad.top + plotH / 2);
+  lineCtx.rotate(-Math.PI / 2);
+  lineCtx.fillText('高温天数（≥35°C）', 0, 0);
+  lineCtx.restore();
+
+  // X-axis labels
+  lineCtx.fillStyle = '#2C3E50';
+  lineCtx.font = '11px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  lineCtx.textAlign = 'center';
+  yearLabels.forEach((yl, i) => {
+    const x = pad.left + (plotW / (yearLabels.length - 1)) * i;
+    lineCtx.fillText(yl, x, H - pad.bottom + 18);
+  });
+
+  // Area fill
+  lineCtx.beginPath();
+  yearLabels.forEach((yl, i) => {
+    const x = pad.left + (plotW / (yearLabels.length - 1)) * i;
+    const y = pad.top + plotH - (values[i] / yMax) * plotH;
+    if (i === 0) lineCtx.moveTo(x, pad.top + plotH);
+    lineCtx.lineTo(x, y);
+  });
+  lineCtx.lineTo(pad.left + plotW, pad.top + plotH);
+  lineCtx.closePath();
+  const areaGrad = lineCtx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
+  areaGrad.addColorStop(0, prov.trend === 'inc' ? 'rgba(231,76,60,0.18)' : 'rgba(41,128,185,0.18)');
+  areaGrad.addColorStop(1, 'rgba(255,255,255,0)');
+  lineCtx.fillStyle = areaGrad;
+  lineCtx.fill();
+
+  // Line
+  lineCtx.strokeStyle = lineColor;
+  lineCtx.lineWidth = 2.5;
+  lineCtx.lineJoin = 'round';
+  lineCtx.lineCap = 'round';
+  lineCtx.beginPath();
+  yearLabels.forEach((yl, i) => {
+    const x = pad.left + (plotW / (yearLabels.length - 1)) * i;
+    const y = pad.top + plotH - (values[i] / yMax) * plotH;
+    if (i === 0) lineCtx.moveTo(x, y);
+    else lineCtx.lineTo(x, y);
+  });
+  lineCtx.stroke();
+
+  // Data points
+  yearLabels.forEach((yl, i) => {
+    const x = pad.left + (plotW / (yearLabels.length - 1)) * i;
+    const y = pad.top + plotH - (values[i] / yMax) * plotH;
+    const isEndpoint = (i === 0 || i === yearLabels.length - 1);
+
+    lineCtx.beginPath();
+    lineCtx.arc(x, y, isEndpoint ? 7 : 3.5, 0, Math.PI * 2);
+
+    if (i === 0) {
+      // 2015
+      lineCtx.fillStyle = '#F39C12';
+      lineCtx.strokeStyle = '#E67E22';
+      lineCtx.lineWidth = 2;
+    } else if (i === yearLabels.length - 1) {
+      // 2025
+      lineCtx.fillStyle = lineColor;
+      lineCtx.strokeStyle = lineColor;
+      lineCtx.lineWidth = 2;
+    } else {
+      lineCtx.fillStyle = '#fff';
+      lineCtx.strokeStyle = lineColor;
+      lineCtx.lineWidth = 1.5;
+    }
+    lineCtx.fill();
+    lineCtx.stroke();
+
+    // Value labels for endpoints
+    if (isEndpoint) {
+      lineCtx.fillStyle = '#2C3E50';
+      lineCtx.font = 'bold 11px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+      lineCtx.textAlign = 'center';
+      const labelY = i === 0 ? y - 14 : y - 14;
+      lineCtx.fillText(values[i] + '天', x, labelY);
+    }
+  });
+
+  // 2015 marker label
+  const x2015 = pad.left;
+  const y2015 = pad.top + plotH - (values[0] / yMax) * plotH;
+  lineCtx.fillStyle = '#F39C12';
+  lineCtx.font = 'bold 10px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  lineCtx.textAlign = 'center';
+  lineCtx.fillText('2015 起点', x2015, y2015 - 22);
+
+  // 2025 marker label
+  const x2025 = pad.left + plotW;
+  const y2025 = pad.top + plotH - (values[10] / yMax) * plotH;
+  lineCtx.fillStyle = lineColor;
+  lineCtx.textAlign = 'center';
+  lineCtx.fillText('2025 终点', x2025, y2025 - 22);
+
+  // Change arrow annotation
+  const changeText = prov.change > 0 ? '↑ +' + prov.change + '天' : (prov.change < 0 ? '↓ ' + prov.change + '天' : '→ 持平');
+  lineCtx.fillStyle = lineColor;
+  lineCtx.font = 'bold 13px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+  lineCtx.fillText(changeText, W / 2, pad.top - 6);
+}
+
+// ══════════════════════════════════
+//  INIT
+// ══════════════════════════════════
+// Ensure DOM is laid out before first draw
+function initChart() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', drawBarChart);
+  } else {
+    drawBarChart();
+  }
+}
+initChart();
+
+let resizeTimer;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(drawBarChart, 100);
+});
+
+// Close overlay on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && overlay.classList.contains('show')) {
+    overlay.classList.remove('show');
+    activeProv = null;
+  }
+});
+
+console.log('🔥 发散柱状图已就绪 | ' + incCount + '省增加 ' + decCount + '省减少 | 点击柱状图查看11年趋势线');
+</script>
+
+</body>
+</html>

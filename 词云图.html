@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026高温词云</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:transparent;
+  font-family:"Microsoft YaHei","SimHei","PingFang SC",sans-serif;
+}
+.stage{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.box{position:relative;width:1540px;height:560px}
+.w{position:absolute;white-space:nowrap;user-select:none;font-weight:bold;
+  letter-spacing:0.03em;cursor:pointer;opacity:0;
+  will-change:transform,opacity;
+  text-shadow:0 2px 8px rgba(0,0,0,0.5);
+}
+.w.show{opacity:1}
+
+/* hover发光 - 由JS动态设置颜色相关的text-shadow */
+.w.hover-glow{
+  z-index:50 !important;
+  filter:brightness(1.3);
+  transition:transform 0.25s ease-out, filter 0.25s ease-out, text-shadow 0.25s ease-out !important;
+}
+
+/* 光粒子 */
+.glow-particle{
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  z-index:60;
+}
+</style>
+</head>
+<body>
+<div class="stage"><div class="box" id="box"></div></div>
+<script>
+(function(){
+var D=[
+["热死了",550],
+["热哭了",180],["热到崩溃",170],["史上最热夏天",162],
+["热到融化",154],["空调续命",146],["桑拿天",138],
+["烤到冒烟",128],["蒸笼模式",120],["超长待机",112],
+["强度拉满",110],["灾难级夏天",105],["热到蒸发",106],
+["烧烤模式",100],["热到变形",100],
+["出门五分钟流汗两小时",96],["南蒸北烤",92],["高温车轮战",88],
+["闷热暴晒感拉满",84],["火炉城市",80],["秋老虎",76],
+["上蒸下煮",72],["热到落泪",74],["热到哭",71],
+["地狱级配置",68],["失控式",68],["buff叠加",66],
+["组合拳",65],["高温续航",62],["救命神器",59],
+["出门五分钟",58],["流汗两小时",56],["加长版三伏天",56],
+["热化了",54],["热的要命",54],["热到爆炸",53],
+["睡觉都像在蒸桑拿",53],["热的不行",52],["热熔了",50],
+["热到不行",50],["热的受不了",50],["浑身黏糊糊",50],
+["热上加热",48],["热的扛不住",48],["热到求饶",48],
+["扛不住",46],["热射病",46],["热的顶不住",46],
+["热到服输",46],["史上最热",46],["热晕了",44],
+["热傻了",42],["热燃了",45],["全乱套了",42],
+["热到绝望",42],["热死宝宝了",42],["热到投降",44],
+["热沸了",42],["厄尔尼诺引爆酷暑",42],["烟雾弹",38],
+["太离谱",44],["热到不想说话",45],["热到膨胀",43],
+["热到自闭",43],["热的要疯了",44],
+["阶段性高温热浪",38],["从未这么热",38],
+["热透了",38],["热麻了",38],["热倦了",36],
+["热穿了",36],["热到心碎",40],["热到心凉",36],
+["家人们",36],["活这么大第一次",35],["热到只想躺平",35],
+["热趴了",34],["热到连脾气都没了",33],["热到四十二度",34],
+["红色高温预警",33],["热到破防",32],["热到裂开",30],
+["热蔫了",32],["真的是热死",32],["露天火炉",32],
+["掀不开的蒸锅",30],["热到历史新高",30],["热虚了",30],
+["红色预警",30],["热到破纪录",32],["热到报警",29],
+["橙色预警",29],["高温橙色预警",31],["五脏六腑都在沸腾",28],
+["热到起锅",28],["每天热死3000人",26],["热到熟了",26],
+["地面能煎蛋",25],["高温不退",25],["高温预警",27],
+["持续高温",27],["中国的夏天",27],["夏天的颜色",25],
+["热浪来袭",24],["副热带高压",24],["热度不减",24],
+["气象台说",24],["高温日数偏多",22],["热到发烫",22],
+["未来一周",22],["天气预报说",23],["方向盘烫手",19],
+["热到发红",24],["热到发光",20],["马路能烤肉",23],
+["体感温度",20],["我在蒸发",20],["酷暑持续",20],
+["热成狗",23],["极端高温",36],["热懵了",40],
+["热到缺氧",39],["热到眩晕",39],["热到怀疑人生",41],
+["热到冒烟",41],["今年最热",40],["热的穿短袖",40],
+["热到没朋友",31],["热得穿短袖",40],
+["座椅烫屁股",21],["热成蒸饺",21],
+["热成红烧肉",19],["热成铁板烧",18],["热成烤肉",17],
+["鞋底快融化",17],["冰西瓜",17],["太阳太毒了",18],
+["北方干热",18],["南方湿热",18],["极端天气",18],
+["我在冒烟",18],["太阳在后背",16],["城市热岛效应",16],
+["我已经熟了",16],["气温破纪录",16],["冰奶茶",16],
+["越热越上头",19],["越热越烦躁",17],["湿球温度",18],
+["热到想冬眠",15],["快烤焦了",15],["冰可乐",15],
+["黄金半小时",15],["高温情绪",15],
+["热到想移民",13],["快热傻了",13],["这次高温玩真的",13],
+["热到不想上班",13],["这天没法出门",13],["别硬扛",13],
+["中暑急救",14],["高温伏旱",14],["命是空调给的",14],
+["热到想吃冰",12],["热到想住冰箱",10],
+["今年夏天不讲武德",12],["别硬撑",12],["防晒霜",12],
+["出门即熟",12],["空调房常驻人口",12],["快烤干了",14],
+["热到想辞职",11],["夏天你别太过分",11],["哪凉快哪待着",11],
+["外面是火焰山",11],
+["我爱冬天",10],["热到没脾气",10],
+["热得像蒸包子",10],
+["热到想念冬天",9],["冬天你快回来",9],
+["我感觉在火锅里",9],["这天真不行",9],
+["空气都在燃烧",8],["热到灵魂出窍",7],["热到自我融化",6],
+["热到空气扭曲",6],["热到产生幻觉",7],["热到变形记",7],
+["热到心跳加速",8],["热到原地蒸发",8],
+["认输认怂",8],["空调我永远爱你",8],
+["热到呼吸急促",7],["热到站不稳",7],
+["热到头晕眼花",6],["热到走不动",6],
+["热到断片",6],["热到视线模糊",5],
+["热到失忆",5],["热到只能躺",5],
+["紫外线爆炸",14],["暴躁模式",16],
+["只是出了点汗歇歇就好",8],
+["全球沸腾",30],["气候危机",28],["热岛效应",26],["温室效应",24],
+["碳排飙升",22],["气温倒挂",20],["热到出门就是受罪",15],["热浪滚滚",25],
+["蒸天蒸地蒸空气",14],["热到鞋底粘地",13],["风扇吹出来都是热风",12],
+["风扇吹的都是火",11],["电费爆表",16],["电表转飞了",14],["电费交到哭",13],
+["空调外机喷火",12],["停电比热更绝望",11],["限电了",10],
+["热到不敢出门",15],["热到不敢开窗",13],["开窗就是进烤箱",12],
+["冰箱里才是人间",11],["冷气房就是天堂",10],["太阳底下站不住",9],
+["汗水糊住眼睛",10],["汗流不止",18],["汗如雨下",20],["汗湿透衣服",16],
+["出门一身汗",14],["黏腻一整天",12],["闷到窒息",15],["闷到喘不过气",13],
+["气压低到爆",11],["空气像凝固了",10],["呼吸都烫嘴",14],["吸进去的空气都是热的",12],
+["烫嘴热风",11],["吹的是暖气",10],["热风扑面",16],["热浪扑面而来",18],
+["室外就是炼狱",13],["影子都快蒸发了",11],["树荫下都不凉快",12],
+["高温预警连发",22],["预警信号满天飞",18],["天天红色预警",16],
+["天气预报天天40度",14],["40度成常态",20],["41度42度43度",17],
+["热到体温失调",13],["皮肤晒伤",15],["晒到脱皮",14],["黑了三个色号",12],
+["防晒根本没用",11],["晒到发痛",10],["紫外线超强",14],
+["热到器官报警",9],["中暑倒地",16],["热到进ICU",14],["热到住院",13],
+["热射病死亡率",12],["黄金抢救时间",11],["千万别硬扛",10],
+["户外作业危险",16],["工地热到停工",14],["外卖员在蒸笼里跑",12],
+["快递小哥快热晕了",11],["环卫工人太辛苦",10],
+["非洲朋友都说热",13],["比非洲还热",15],["迪拜都没这么热",12],
+["撒哈拉搬来了",11],["赤道向北漂移",10],
+["冰块自由",11],["冷饮续命",14],["冰水救命",13],["冰棍化了",12],
+["雪糕秒化",11],["奶茶加三份冰",10],["凉席都是热的",12],
+["枕头烫脸",10],["被窝像烤炉",9],["凉席变热席",11],
+["半夜热醒",16],["辗转反侧到天亮",14],["开空调盖棉被",13],
+["空调16度最香",12],["空调就是再生父母",11],["WiFi+空调=活下去",10],
+["命是空调给的",14],["离开空调房就是渡劫",10],
+["城市变烤箱",17],["柏油路冒烟",15],["汽车自燃",13],
+["柏油路软了",12],["地砖能煎蛋",11],["塑料椅烫到坐不下",10],
+["车内温度70度",12],["车内像蒸笼",11],["方向盘烫到戴手套",10],
+["高温假",18],["该放高温假了",16],["热到罢工",14],["热到摸鱼",13],
+["办公室空调大战",12],["空调温度之争",11],
+["热到烦躁易怒",15],["热到暴躁",17],["热到想打人",13],
+["热到没耐心",12],["高温让人发疯",11],["热到丧失理智",10],
+["热到社恐发作",9],["热到不想社交",11],
+["热到只想泡水里",12],["游泳池人挤人",11],["海边全是人",10],
+["冲凉冲了五遍",9],["冷水澡续命",10],["洗澡水都是热的",9],
+["热到耳鸣",8],["热到恶心",10],["热到想吐",9],
+["热到头皮发麻",8],["热到全身无力",9],["热到四肢发软",8],
+["热到手机发烫",11],["手机都热到降频",10],["电脑热到蓝屏",9],
+["电子产品集体中暑",8]
+];
+
+var CW=1540,CH=560;
+var box=document.getElementById("box");
+var placed=[];
+
+// 配色函数
+function getColor(w){
+  if(w>=130) return ["#FFFBC5","#FED45F","#F77B32"][~~(Math.random()*3)];
+  if(w>=70)  return ["#FED45F","#F77B32","#EB4A23"][~~(Math.random()*3)];
+  if(w>=30)  return ["#F77B32","#EB4A23","#931519"][~~(Math.random()*3)];
+  return ["#EB4A23","#931519","#68161A"][~~(Math.random()*3)];
+}
+
+// 字号函数
+function getFS(w){
+  if(w>=500) return 82;
+  return Math.round(10+(68-10)*Math.sqrt(Math.max(0,w-3)/(550-3)));
+}
+
+// 估算文字宽高
+function getSize(t,fs){
+  var w=0;
+  for(var i=0;i<t.length;i++){
+    w+=(t.charCodeAt(i)>255?fs:fs*0.6);
+  }
+  return{w:w*1.06,h:fs*1.25};
+}
+
+// 波浪长方形约束
+function inWaveRect(cx,cy){
+  var nx=(cx-CW/2)/(CW/2);
+  var ny=(cy-CH/2)/(CH/2);
+  var waveY=0.14*Math.sin(nx*Math.PI*2.5);
+  var waveX=0.03*Math.sin(ny*Math.PI*2);
+  return Math.abs(ny)<(0.88+waveY) && Math.abs(nx)<(0.97+waveX);
+}
+
+// 螺旋排布
+function place(tw,th){
+  var cx=CW/2,cy=CH/2;
+  var MR=Math.min(CW,CH)*0.48;
+  var angle=-Math.PI/2, r=2;
+  for(var i=0;i<50000;i++){
+    var x=cx+r*Math.cos(angle)-tw/2;
+    var y=cy+r*Math.sin(angle)-th/2;
+    if(x<2||y<2||x+tw>CW-2||y+th>CH-2){
+      angle+=0.08; r+=0.08/(2*Math.PI); if(r>MR*1.6)break; continue;
+    }
+    if(!inWaveRect(x+tw/2,y+th/2)){
+      angle+=0.08; r+=0.08/(2*Math.PI); if(r>MR*1.6)break; continue;
+    }
+    var ok=true;
+    for(var j=0;j<placed.length;j++){
+      var p=placed[j];
+      if(!(x+tw<p.x-2||x>p.x+p.w+2||y+th<p.y-2||y>p.y+p.h+2)){ok=false;break;}
+    }
+    if(ok){placed.push({x:x,y:y,w:tw,h:th});return{x:x,y:y};}
+    angle+=0.08; r+=0.08/(2*Math.PI); if(r>MR*1.6)break;
+  }
+  return null;
+}
+
+// 去重
+var seen={};
+var unique=[];
+for(var i=0;i<D.length;i++){
+  if(!seen[D[i][0]]){seen[D[i][0]]=1;unique.push(D[i]);}
+}
+D=unique;
+D.sort(function(a,b){return b[1]-a[1];});
+
+// 将hex颜色转为rgba，用于生成同色辉光
+function hexToRgba(hex,a){
+  hex=hex.replace("#","");
+  var r=parseInt(hex.substring(0,2),16);
+  var g=parseInt(hex.substring(2,4),16);
+  var b=parseInt(hex.substring(4,6),16);
+  return "rgba("+r+","+g+","+b+","+a+")";
+}
+
+// 生成hover时的text-shadow（同色辉光）
+function makeGlowShadow(color){
+  return "0 0 8px "+hexToRgba(color,0.7)+","+
+         "0 0 20px "+hexToRgba(color,0.5)+","+
+         "0 0 40px "+hexToRgba(color,0.35)+","+
+         "0 0 70px "+hexToRgba(color,0.2)+","+
+         "0 0 110px "+hexToRgba(color,0.1);
+}
+
+// 正常态text-shadow
+var normalShadow="0 2px 8px rgba(0,0,0,0.5)";
+
+// 创建DOM元素
+for(var i=0;i<D.length;i++){
+  var t=D[i][0], w=D[i][1];
+  var fs=(t==="热死了"?82:getFS(w));
+  var color=(t==="热死了"?"#FF2020":getColor(w));
+  var sz=getSize(t,fs);
+  var pos;
+
+  if(t==="热死了"){
+    pos={x:(CW-sz.w)/2, y:(CH-sz.h)/2-10};
+    placed.push({x:pos.x,y:pos.y,w:sz.w,h:sz.h});
+  }else{
+    pos=place(sz.w,sz.h);
+    if(!pos){
+      var fs2=Math.max(9,fs-2);
+      var sz2=getSize(t,fs2);
+      pos=place(sz2.w,sz2.h);
+      if(pos){fs=fs2;sz=sz2;}
+      else{continue;}
+    }
+  }
+
+  var el=document.createElement("span");
+  el.className="w"+(t==="热死了"?" main":"");
+  el.textContent=t;
+  el.style.fontSize=fs+"px";
+  el.style.color=color;
+  el.style.left=pos.x+"px";
+  el.style.top=pos.y+"px";
+  // 存储颜色到data属性，hover时使用
+  el.setAttribute("data-color",color);
+  box.appendChild(el);
+
+  // ====== hover光效：散发与字体颜色相近的辉光 ======
+  (function(el,color){
+    el.addEventListener("mouseenter",function(){
+      if(el._hoverGlow) return;
+      el._hoverGlow=true;
+      // 停止微弹，进入hover状态
+      el._wigglePaused=true;
+      el.classList.add("hover-glow");
+      // 放大 + 同色辉光
+      el.style.transform="scale(1.22)";
+      el.style.textShadow=makeGlowShadow(color);
+      el.style.filter="brightness(1.35)";
+      // 散发光粒子
+      spawnHoverParticles(el,color);
+    });
+    el.addEventListener("mouseleave",function(){
+      el._hoverGlow=false;
+      el._wigglePaused=false;
+      el.classList.remove("hover-glow");
+      el.style.transform="scale(1)";
+      el.style.textShadow=normalShadow;
+      el.style.filter="brightness(1)";
+      // 移除残留光粒子
+      var parts=el._hoverParts;
+      if(parts){
+        for(var k=0;k<parts.length;k++){
+          if(parts[k]&&parts[k].parentNode) parts[k].remove();
+        }
+        el._hoverParts=null;
+      }
+    });
+  })(el,color);
+
+  // ====== 弹入 + 持续微弹 ======
+  (function(el,delay){
+    setTimeout(function(){
+      // 弹入动画
+      el.style.transition="opacity 0.4s ease, transform 0.55s cubic-bezier(0.34,1.56,0.64,1)";
+      el.style.opacity="1";
+      el.style.transform="scale(1.06)";
+      setTimeout(function(){
+        el.style.transition="none";
+        el.style.transform="scale(1)";
+        el.classList.add("show");
+        // 开始持续微弹
+        startWiggle(el);
+      },580);
+    },delay);
+  })(el, i*25+60);
+}
+
+// 持续微弹动画（每个词都有）
+function startWiggle(el){
+  (function tick(){
+    // hover时暂停微弹
+    if(el._wigglePaused){
+      setTimeout(tick,200);
+      return;
+    }
+    if(!el.classList.contains("show")) return;
+    var sc=1+Math.random()*0.025;
+    var dur=1.6+Math.random()*2.2;
+    el.style.transition="transform "+dur+"s ease-in-out";
+    el.style.transform="scale("+sc+")";
+    // 下一次微弹在当前动画完成后
+    setTimeout(tick, dur*1000+Math.random()*800);
+  })();
+}
+
+// hover时散发光粒子
+function spawnHoverParticles(el,color){
+  var rect=el.getBoundingClientRect();
+  var boxRect=box.getBoundingClientRect();
+  var cx=rect.left-boxRect.left+rect.width/2;
+  var cy=rect.top-boxRect.top+rect.height/2;
+  var parts=[];
+
+  for(var p=0;p<8;p++){
+    var part=document.createElement("div");
+    part.className="glow-particle";
+    var angle=p*Math.PI*2/8+Math.random()*0.6;
+    var dist=20+Math.random()*35;
+    var size=2+Math.random()*4;
+    var startX=cx-size/2+Math.cos(angle)*5;
+    var startY=cy-size/2+Math.sin(angle)*5;
+    part.style.width=size+"px";
+    part.style.height=size+"px";
+    part.style.left=startX+"px";
+    part.style.top=startY+"px";
+    part.style.background=color;
+    part.style.boxShadow="0 0 6px "+hexToRgba(color,0.8)+",0 0 14px "+hexToRgba(color,0.5);
+    part.style.opacity="1";
+    box.appendChild(part);
+    parts.push(part);
+
+    // 动画：向外飘散+淡出
+    (function(part,sx,sy,angle,dist){
+      var startTime=null;
+      var duration=600+Math.random()*400;
+      function animate(ts){
+        if(!startTime) startTime=ts;
+        var progress=Math.min((ts-startTime)/duration,1);
+        var ease=1-Math.pow(1-progress,2); // easeOutQuad
+        var dx=Math.cos(angle)*dist*ease;
+        var dy=Math.sin(angle)*dist*ease;
+        part.style.left=(sx+dx)+"px";
+        part.style.top=(sy+dy)+"px";
+        part.style.opacity=String(1-progress);
+        part.style.transform="scale("+(1-progress*0.5)+")";
+        if(progress<1){
+          requestAnimationFrame(animate);
+        }else{
+          part.remove();
+        }
+      }
+      requestAnimationFrame(animate);
+    })(part,startX,startY,angle,dist);
+  }
+  el._hoverParts=parts;
+}
+
+// 主词呼吸动画
+var mainEl=box.querySelector(".main");
+if(mainEl){
+  mainEl.style.cursor="pointer";
+  (function breathe(){
+    if(mainEl._hoverGlow){setTimeout(breathe,500);return;}
+    mainEl.style.transition="transform 2.8s ease-in-out, text-shadow 2.8s ease-in-out";
+    mainEl.style.transform="scale(1.07)";
+    mainEl.style.textShadow="0 4px 14px rgba(0,0,0,0.55),0 0 50px rgba(255,32,32,0.5),0 0 80px rgba(255,32,32,0.3)";
+    setTimeout(function(){
+      if(mainEl._hoverGlow){setTimeout(breathe,500);return;}
+      mainEl.style.transform="scale(1)";
+      mainEl.style.textShadow="0 2px 10px rgba(0,0,0,0.5),0 0 28px rgba(255,32,32,0.3)";
+      setTimeout(breathe,2800);
+    },2800);
+  })();
+}
+
+})();
+</script>
+</body>
+</html>

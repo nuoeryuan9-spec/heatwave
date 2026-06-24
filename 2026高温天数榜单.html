@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高温天数榜单</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background-color: #F5F0E8;
+    padding: 20px 16px 40px;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+/* 标题区 */
+.header { text-align: center; padding: 16px 0 20px; }
+.header h1 { font-size: 22px; color: #222; font-weight: bold; margin-bottom: 6px; }
+.header p { font-size: 12px; color: #999; }
+
+/* 领奖台 */
+.podium-section {
+    background: linear-gradient(180deg, #FEF9E7 0%, #FDF3D8 60%, #F5ECC8 100%);
+    border-radius: 20px;
+    padding: 80px 16px 28px;
+    box-shadow: 0 4px 24px rgba(180,140,60,0.18);
+}
+.podium-flex {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 10px;
+    height: 270px;
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+.col-1st { order: 2; width: 96px; }
+.col-2nd { order: 1; width: 84px; }
+.col-3rd { order: 3; width: 84px; }
+
+.top-card {
+    position: absolute;
+    top: -78px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 76px;
+    text-align: center;
+    z-index: 20;
+}
+.top-card-inner {
+    background: white;
+    border-radius: 14px;
+    padding: 10px 6px 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    border: 2px solid #F0E0C0;
+}
+.top-card-medal { font-size: 26px; line-height: 1.1; margin-bottom: 2px; }
+.top-card-days {
+    background: #333;
+    color: white;
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.cylinder {
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 16px;
+}
+.cylinder-num { font-size: 44px; font-weight: 900; line-height: 1; }
+
+.col-1st .cylinder {
+    width: 92px; height: 185px;
+    background: linear-gradient(135deg, #F44336 0%, #E53935 38%, #C62828 100%);
+    box-shadow: inset -6px 0 18px rgba(0,0,0,0.06), inset 6px 0 18px rgba(255,255,255,0.25), 0 8px 20px rgba(0,0,0,0.12);
+}
+.col-1st .cylinder-num { color: rgba(255,255,255,0.88); text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+.col-2nd .cylinder {
+    width: 82px; height: 145px;
+    background: linear-gradient(135deg, #FFB347 0%, #F5923A 40%, #E87E2A 100%);
+    box-shadow: inset -6px 0 18px rgba(0,0,0,0.06), inset 6px 0 18px rgba(255,255,255,0.25), 0 8px 20px rgba(0,0,0,0.12);
+}
+.col-2nd .cylinder-num { color: rgba(255,255,255,0.9); text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+.col-3rd .cylinder {
+    width: 82px; height: 108px;
+    background: linear-gradient(135deg, #FFE082 0%, #FFD54F 42%, #FFC107 100%);
+    box-shadow: inset -6px 0 18px rgba(0,0,0,0.06), inset 6px 0 18px rgba(255,255,255,0.25), 0 8px 20px rgba(0,0,0,0.12);
+}
+.col-3rd .cylinder-num { color: rgba(140,110,0,0.5); text-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+.province-name { font-size: 11px; color: #777; margin-top: 10px; text-align: center; cursor: pointer; }
+.province-name:hover { color: #333; text-decoration: underline; }
+
+/* 排名列表 */
+.rank-list {
+    margin-top: 20px;
+    background: white;
+    border-radius: 18px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+.rank-tabs {
+    display: flex;
+    align-items: center;
+    padding: 16px 18px 0;
+    gap: 22px;
+    border-bottom: 1px solid #F2F2F2;
+}
+.rank-tab {
+    font-size: 15px;
+    padding-bottom: 12px;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+.rank-tab.active {
+    color: #333;
+    font-weight: bold;
+    border-bottom: 2.5px solid #E64A19;
+}
+.rank-tab.inactive { color: #BBB; }
+.rank-tab.inactive:hover { color: #666; }
+
+/* 排名行 */
+.rank-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid #F7F7F7;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.rank-row:hover { background-color: #FFFDF8; }
+.rank-row:last-child { border-bottom: none; }
+
+.rank-num {
+    width: 30px;
+    font-size: 16px;
+    font-weight: bold;
+    color: #BBB;
+    flex-shrink: 0;
+}
+.rank-num.top3 { color: #E64A19; }
+
+.rank-bar-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.rank-bar {
+    height: 24px;
+    border-radius: 6px;
+    min-width: 36px;
+    transition: width 0.4s ease;
+}
+.rank-bar.bar-hot { background: linear-gradient(90deg, #FFEBEE 0%, #FFCDD2 100%); }
+.rank-bar.bar-warm { background: linear-gradient(90deg, #FFF8E1 0%, #FFECB3 100%); }
+.rank-bar.bar-mild { background: linear-gradient(90deg, #F1F8E9 0%, #DCEDC8 100%); }
+
+.rank-province {
+    font-size: 14px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.rank-days {
+    font-size: 12px;
+    color: #E64A19;
+    font-weight: bold;
+    flex-shrink: 0;
+    white-space: nowrap;
+    margin-left: 6px;
+}
+.rank-fav {
+    color: #DDD;
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+}
+.rank-fav:hover { color: #E64A19; }
+.rank-fav.favorited { color: #E64A19; }
+
+/* 展开按钮 */
+.expand-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 13px;
+    color: #999;
+    font-size: 13px;
+    cursor: pointer;
+    border-top: 1px solid #F3F3F3;
+    background: none;
+    border-left: none;
+    border-right: none;
+    width: 100%;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+}
+.expand-btn:hover { background: #FAFAFA; color: #666; }
+.expand-btn.expanded { color: #E64A19; }
+
+/* 收起按钮 */
+.collapse-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 13px;
+    color: #999;
+    font-size: 13px;
+    cursor: pointer;
+    border-top: 1px solid #F3F3F3;
+    background: none;
+    border-left: none;
+    border-right: none;
+    width: 100%;
+    font-family: inherit;
+}
+.collapse-btn:hover { background: #FAFAFA; color: #666; }
+.collapse-btn.visible { display: flex; }
+
+/* 隐藏的额外行（初始隐藏） */
+.rank-extra { display: none; animation: fadeIn 0.3s ease; }
+.rank-extra.show { display: block; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 详情弹窗遮罩 */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 100;
+    justify-content: center;
+    align-items: flex-end;
+    animation: overlayIn 0.25s ease;
+}
+.modal-overlay.show { display: flex; }
+
+@keyframes overlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 详情弹窗内容 */
+.modal-content {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-width: 560px;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px 20px 30px;
+    animation: slideUp 0.3s ease;
+    position: relative;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+.modal-handle {
+    width: 40px; height: 4px;
+    background: #DDD;
+    border-radius: 2px;
+    margin: 0 auto 18px;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.modal-rank-badge {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 900;
+    color: white;
+    flex-shrink: 0;
+}
+.badge-gold { background: linear-gradient(135deg, #FFD700, #FFA000); }
+.badge-silver { background: linear-gradient(135deg, #C0C0C0, #9E9E9E); }
+.badge-bronze { background: linear-gradient(135deg, #CD7F32, #A1887F); }
+.badge-normal { background: linear-gradient(135deg, #78909C, #546E7A); }
+
+.modal-title { font-size: 20px; font-weight: bold; color: #222; }
+.modal-subtitle { font-size: 13px; color: #999; margin-top: 2px; }
+
+.modal-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.stat-card {
+    background: #F8F6F1;
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+}
+.stat-value { font-size: 22px; font-weight: 900; color: #E64A19; }
+.stat-label { font-size: 11px; color: #888; margin-top: 4px; }
+
+.modal-chart-area {
+    background: #FAFAF8;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.modal-chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 12px;
+}
+.monthly-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 120px;
+    gap: 4px;
+}
+.monthly-bar-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.monthly-bar {
+    width: 100%;
+    max-width: 32px;
+    border-radius: 4px 4px 0 0;
+    background: linear-gradient(180deg, #E64A19 0%, #FF7043 100%);
+    transition: height 0.5s ease;
+    min-height: 2px;
+}
+.monthly-bar-label { font-size: 10px; color: #999; }
+.monthly-bar-val { font-size: 10px; font-weight: 600; color: #E64A19; }
+
+.modal-close-btn {
+    width: 100%;
+    padding: 14px;
+    background: #F5F5F5;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px;
+    color: #666;
+    cursor: pointer;
+    font-family: inherit;
+    margin-top: 8px;
+    transition: background 0.15s;
+}
+.modal-close-btn:hover { background: #EEE; }
+</style>
+</head>
+<body>
+
+<!-- 标题 -->
+<div class="header">
+    <h1>🔥 高温天数榜单</h1>
+    <p>2026年1-6月 · 日最高气温 ≥ 35°C</p>
+</div>
+
+<!-- 领奖台区域 -->
+<div class="podium-section" onclick="showDetail('海南')">
+    <div class="podium-flex">
+        <!-- 第2名 -->
+        <div class="col col-2nd" onclick="event.stopPropagation();showDetail('广东')">
+            <div class="top-card"><div class="top-card-inner">
+                <div class="top-card-medal">🥈</div><div class="top-card-days">29天</div>
+            </div></div>
+            <div class="cylinder"><span class="cylinder-num">2</span></div>
+            <div class="province-name">广东省</div>
+        </div>
+        <!-- 第1名 -->
+        <div class="col col-1st" onclick="event.stopPropagation();showDetail('海南')">
+            <div class="top-card"><div class="top-card-inner">
+                <div class="top-card-medal">🥇</div><div class="top-card-days">35天</div>
+            </div></div>
+            <div class="cylinder"><span class="cylinder-num">1</span></div>
+            <div class="province-name">海南省</div>
+        </div>
+        <!-- 第3名 -->
+        <div class="col col-3rd" onclick="event.stopPropagation();showDetail('广西')">
+            <div class="top-card"><div class="top-card-inner">
+                <div class="top-card-medal">🥉</div><div class="top-card-days">27天</div>
+            </div></div>
+            <div class="cylinder"><span class="cylinder-num">3</span></div>
+            <div class="province-name">广西壮族自治区</div>
+        </div>
+    </div>
+</div>
+
+<!-- 排名列表 -->
+<div class="rank-list" id="rankList">
+    <div class="rank-tabs">
+        <button class="rank-tab active" id="tabTotal" onclick="switchTab('total')">总榜</button>
+        <button class="rank-tab inactive" id="tabMonth" onclick="switchTab('month')">月榜</button>
+    </div>
+    <div id="rankBody"></div>
+    <button class="expand-btn" id="expandBtn" onclick="toggleExpand()">▾ 展开剩余排名</button>
+    <button class="collapse-btn" id="collapseBtn" onclick="toggleExpand()">▲ 收起排名</button>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal-overlay" id="detailModal" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <div class="modal-handle"></div>
+        <div class="modal-header">
+            <div class="modal-rank-badge" id="modalBadge">1</div>
+            <div>
+                <div class="modal-title" id="modalTitle">海南省</div>
+                <div class="modal-subtitle" id="modalSubtitle">2026年1-6月高温数据</div>
+            </div>
+        </div>
+        <div class="modal-stats" id="modalStats"></div>
+        <div class="modal-chart-area">
+            <div class="modal-chart-title">📊 各月高温天数分布</div>
+            <div class="monthly-bars" id="monthlyChart"></div>
+        </div>
+        <button class="modal-close-btn" onclick="closeDetail()">关闭</button>
+    </div>
+</div>
+
+<script>
+// ===== 完整33省份数据 =====
+var fullData = [
+    { rank: 1,  name: "海南省",           days: 35, months: [0,0,2,8,12,13] },
+    { rank: 2,  name: "广东省",           days: 29, months: [0,0,1,7,11,10] },
+    { rank: 3,  name: "广西壮族自治区",   days: 27, months: [0,0,1,6,10,10] },
+    { rank: 4,  name: "福建省",           days: 22, months: [0,0,0,4,9,9] },
+    { rank: 5,  name: "云南省",           days: 14, months: [0,0,0,3,5,6] },
+    { rank: 6,  name: "江西省",           days: 11, months: [0,0,0,1,4,6] },
+    { rank: 7,  name: "浙江省",           days: 11, months: [0,0,0,1,4,6] },
+    { rank: 8,  name: "湖南省",           days: 10, months: [0,0,0,1,4,5] },
+    { rank: 9,  name: "重庆市",           days: 9,  months: [0,0,0,1,3,5] },
+    { rank: 10, name: "台湾省",             days: 9,  months: [0,0,0,2,3,4] },
+    { rank: 11, name: "四川省",           days: 8,  months: [0,0,0,0,3,5] },
+    { rank: 12, name: "安徽省",           days: 7,  months: [0,0,0,1,2,4] },
+    { rank: 13, name: "湖北省",           days: 7,  months: [0,0,0,1,2,4] },
+    { rank: 14, name: "河南省",           days: 6,  months: [0,0,0,1,2,3] },
+    { rank: 15, name: "贵州省",           days: 5,  months: [0,0,0,0,2,3] },
+    { rank: 16, name: "江苏省",           days: 5,  months: [0,0,0,1,1,3] },
+    { rank: 17, name: "上海市",           days: 4,  months: [0,0,0,0,1,3] },
+    { rank: 18, name: "陕西省",           days: 4,  months: [0,0,0,1,1,2] },
+    { rank: 19, name: "河北省",           days: 3,  months: [0,0,0,0,1,2] },
+    { rank: 20, name: "山东省",           days: 3,  months: [0,0,0,0,1,2] },
+    { rank: 21, name: "北京市",           days: 3,  months: [0,0,0,0,1,2] },
+    { rank: 22, name: "天津市",           days: 2,  months: [0,0,0,0,1,1] },
+    { rank: 23, name: "山西省",           days: 2,  months: [0,0,0,0,1,1] },
+    { rank: 24, name: "辽宁省",           days: 2,  months: [0,0,0,0,0,2] },
+    { rank: 25, name: "新疆维吾尔自治区", days: 2, months: [0,0,0,0,1,1] },
+    { rank: 26, name: "内蒙古自治区",     days: 1,  months: [0,0,0,0,0,1] },
+    { rank: 27, name: "吉林省",           days: 1,  months: [0,0,0,0,0,1] },
+    { rank: 28, name: "甘肃省",           days: 1,  months: [0,0,0,0,0,1] },
+    { rank: 29, name: "宁夏回族自治区",   days: 1,  months: [0,0,0,0,0,1] },
+    { rank: 30, name: "西藏自治区",       days: 0,  months: [0,0,0,0,0,0] },
+    { rank: 31, name: "黑龙江省",         days: 0,  months: [0,0,0,0,0,0] },
+    { rank: 32, name: "青海省",           days: 0,  months: [0,0,0,0,0,0] },
+    { rank: 33, name: "香港特别行政区",   days: 0,  months: [0,0,0,0,0,0] },
+];
+
+var maxDays = fullData[0].days; // 35
+var expanded = false;
+
+function getBarClass(days) {
+    if (days >= 20) return 'bar-hot';
+    if (days >= 5) return 'bar-warm';
+    return 'bar-mild';
+}
+
+function getBarWidth(days) {
+    var pct = Math.max((days / maxDays) * 100, 12);
+    return pct + '%';
+}
+
+function renderRankList() {
+    var html = '';
+    for (var i = 0; i < fullData.length; i++) {
+        var d = fullData[i];
+        var isExtra = (i >= 8);
+        var cls = isExtra ? 'rank-row rank-extra' : 'rank-row';
+        var numCls = (d.rank <= 3) ? 'rank-num top3' : 'rank-num';
+
+        html += '<div class="' + cls + '" data-index="' + i + '" onclick="showDetailByIndex(' + i + ')">' +
+            '<span class="' + numCls + '">' + d.rank + '</span>' +
+            '<div class="rank-bar-wrap">' +
+                '<div class="rank-bar ' + getBarClass(d.days) + '" style="width:' + getBarWidth(d.days) + '"></div>' +
+                '<span class="rank-province">' + d.name + '</span>' +
+            '</div>' +
+            '<span class="rank-days">' + d.days + '天</span>' +
+            '<span class="rank-fav" onclick="event.stopPropagation();toggleFav(this)">♡</span>' +
+        '</div>';
+    }
+    document.getElementById('rankBody').innerHTML = html;
+}
+
+function toggleExpand() {
+    expanded = !expanded;
+    var extras = document.querySelectorAll('.rank-extra');
+    for (var i = 0; i < extras.length; i++) {
+        if (expanded) extras[i].classList.add('show');
+        else extras[i].classList.remove('show');
+    }
+    document.getElementById('expandBtn').style.display = expanded ? 'none' : '';
+    document.getElementById('collapseBtn').className = expanded ? 'collapse-btn visible' : 'collapse-btn';
+}
+
+function switchTab(tab) {
+    var tTotal = document.getElementById('tabTotal');
+    var tMonth = document.getElementById('tabMonth');
+    if (tab === 'total') {
+        tTotal.className = 'rank-tab active';
+        tMonth.className = 'rank-tab inactive';
+    } else {
+        tTotal.className = 'rank-tab inactive';
+        tMonth.className = 'rank-tab active';
+    }
+}
+
+function toggleFav(el) {
+    el.classList.toggle('favorited');
+    el.textContent = el.classList.contains('favorited') ? '♥' : '♡';
+}
+
+// ===== 详情弹窗 =====
+function showDetail(name) {
+    for (var i = 0; i < fullData.length; i++) {
+        if (fullData[i].name.indexOf(name) === 0 || name.indexOf(fullData[i].name) === 0) {
+            showDetailByIndex(i);
+            return;
+        }
+    }
+}
+
+function showDetailByIndex(index) {
+    var d = fullData[index];
+    var m = d.months;
+    var totalMonths = m[0]+m[1]+m[2]+m[3]+m[4]+m[5];
+    var peakMonthIdx = 0, peakVal = 0;
+    for (var i = 0; i < 6; i++) {
+        if (m[i] > peakVal) { peakVal = m[i]; peakMonthIdx = i; }
+    }
+    var monthNames = ['1月','2月','3月','4月','5月','6月'];
+    var peakMonth = monthNames[peakMonthIdx];
+
+    // 排名徽章样式
+    var badgeClass, badgeText;
+    if (d.rank <= 3) {
+        var bc = ['badge-gold','badge-silver','badge-bronze'];
+        badgeClass = bc[d.rank - 1];
+    } else {
+        badgeClass = 'badge-normal';
+    }
+
+    document.getElementById('modalBadge').className = 'modal-rank-badge ' + badgeClass;
+    document.getElementById('modalBadge').textContent = d.rank;
+    document.getElementById('modalTitle').textContent = d.name;
+    document.getElementById('modalSubtitle').textContent = '2026年1-6月 · 高温天数第' + d.rank + '名';
+
+    // 统计卡片
+    document.getElementById('modalStats').innerHTML =
+        '<div class="stat-card"><div class="stat-value">' + d.days + '</div><div class="stat-label">累计高温天</div></div>' +
+        '<div class="stat-card"><div class="stat-value">' + peakMonth + '</div><div class="stat-label">最热月份</div></div>' +
+        '<div class="stat-card"><div class="stat-value">' + peakVal + '</div><div class="stat-label">单月最高</div></div>';
+
+    // 月度柱状图
+    var chartHtml = '';
+    var monthMax = Math.max.apply(null, m);
+    if (monthMax === 0) monthMax = 1;
+    for (var i = 0; i < 6; i++) {
+        var barH = Math.max((m[i] / monthMax) * 90, m[i] > 0 ? 4 : 1);
+        chartHtml += '<div class="monthly-bar-wrap">' +
+            '<span class="monthly-bar-val">' + m[i] + '</span>' +
+            '<div class="monthly-bar" style="height:' + barH + 'px"></div>' +
+            '<span class="monthly-bar-label">' + monthNames[i] + '</span>' +
+        '</div>';
+    }
+    document.getElementById('monthlyChart').innerHTML = chartHtml;
+
+    // 显示弹窗
+    document.getElementById('detailModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeDetail() {
+    document.getElementById('detailModal').classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function closeModal(e) {
+    if (e.target === e.currentTarget) closeDetail();
+}
+
+// 初始化
+renderRankList();
+</script>
+
+</body>
+</html>
